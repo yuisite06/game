@@ -28,7 +28,9 @@ export function pressAction(src = 'e') {
   if (!$('dialog').classList.contains('hidden')) return nextDialog();
   if (!$('card').classList.contains('hidden')) return;
   if (src === 'space' && state.riding) return;     // de moto, espaço/A = grau (o jogo lê a tecla segurada)
-  state.action = true;
+
+    state.action = true;
+  state.actionSrc = (src === 'space' && !isTouch) ? 'space' : 'e';   // espaço no PC não manda a galera embora
 }
 
 // embaixadinha: ESPAÇO a pé (ou botão BOLA no celular). O jogo só aceita se a bola estiver perto

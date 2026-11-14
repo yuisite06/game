@@ -8,6 +8,10 @@ const ROAD = new Set(['#', '-', '|', 'b', 'o']);          // moto só anda aqui
 const TILE_KEY = { '#':'asfalto', '-':'asfalto_faixa_h', '|':'asfalto_faixa', c:'calcada', p:'piso_rachado', g:'grama', d:'terra', b:'bueiro', o:'poca', s:'escada' };
 const WALK = 92, RIDE = 215, DOG_SPEED = 150, DOG_RETURN = 85;
 const JUG = { PER: 0.7, JANELA: 0.62, LIMITE: 1.12 };   // embaixadinha: tempo de cada toque (s) e janela de acerto
+// ---- MULTIDÃO: mexe aqui pra ajustar ----
+const CROWD_MAX = 600;                                          // máximo de gente
+const CROWD_FRASES = ['UAU!', 'JOGADOR NÚMERO 1!', 'PRÓXIMO NEYMAR!'];
+const CROWD_TONS = [0x050507, 0x15151b, 0x24242c, 0x33333d];    // preto -> cinza escuro (cor chapada)
 
 // ---- limpa postes: nada colado em ponto de ônibus e luz nunca em cima de fio ----
 (function limpaPostes() {
@@ -91,6 +95,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBall();
     this.buildGoals();
     this.buildDog();
+    this.buildCrowd();
     this.buildSunset();
     this.buildBusLight();
 
@@ -295,6 +300,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   kick() {
     if (this.time.now - this.lastKick < 120) return;
     this.lastKick = this.time.now;
+    this.crowdCheer();
     const p = this.player, v = Math.hypot(p.body.velocity.x, p.body.velocity.y);
     const ang = Phaser.Math.Angle.Between(p.x, p.y - 4, this.ball.x, this.ball.y);
     const sp = Math.max(150, v * 1.7 + 80);
@@ -376,6 +382,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   }
   startJuggle() {
     this.juggling = true; this.jugPh = 0; this.jugN = 1;
+    this.crowdCheer();
     this.ball.setVelocity(0, 0); this.ball.body.enable = false;
     this.jugShadow = this.add.ellipse(0, 0, 9, 4, 0x000000, 0.35);
     this.jugText = this.add.text(0, 0, '1', { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: '#ffd23f', stroke: '#000', strokeThickness: 4 })
@@ -476,7 +483,201 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     s.setDepth(s.y);
   }
 
-  // ------------------------------------------------------- fim de tarde (clima)
+  // ------------------------------------------------------------------ multidão
+  buildCrowd() {
+    const q = map.quadra, qx = q.x * T, qy = q.y * T, qw = q.w * T, qh = q.h * T;
+    // lugares: colados na quadra e nas traves, nunca por cima (corpo inteiro: ~24x44)
+    const cour = new Phaser.Geom.Rectangle(qx - 10, qy - 2, qw + 20, qh + 4);
+    const outer = new Phaser.Geom.Rectangle(cour.x - 90, cour.y - 90, cour.width + 180, cour.height + 180);
+    this.crowdBlock = Uint8Array.from(this.navBlock);                            // casas/postes/pontos + a quadra inteira
+    for (let y = q.y; y < q.y + q.h; y++) for (let x = q.x; x < q.x + q.w; x++) this.crowdBlock[y * map.W + x] = 1;
+    const bloq = (x, y) => { const tx = Math.floor(x / T), ty = Math.floor(y / T); return tx < 0 || ty < 0 || tx >= map.W || ty >= map.H || this.crowdBlock[ty * map.W + tx]; };
+    const cel = {};
+    const tomDe = (x, y) => {                                                    // grupos de ~3 pessoas com o mesmo tom
+      const k = `${Math.floor(x / 40)},${Math.floor(y / 26)}`;
+      if (cel[k] === undefined) cel[k] = Phaser.Math.RND.pick([0, 0, 1, 1, 2, 3]);
+      return Phaser.Math.Clamp(cel[k] + Phaser.Math.RND.pick([-1, 0, 0, 0, 0, 0, 0, 1]), 0, 3);
+    };
+    const lugares = [];
+    for (let row = 0, fy = outer.y; fy <= outer.bottom + 50; row++, fy += 8) {
+      for (let fx = outer.x + (row % 2 ? 6 : 0); fx <= outer.right; fx += 12) {
+        const x = Math.round(fx + Phaser.Math.Between(-2, 2)), y = Math.round(fy + Phaser.Math.Between(-1, 1));
+        if (x < 14 || x > map.W * T - 14 || y < 46 || y > map.H * T - 2) continue;
+        if (Phaser.Geom.Intersects.RectangleToRectangle(new Phaser.Geom.Rectangle(x - 12, y - 44, 24, 44), cour)) continue;   // corpo inteiro fora da quadra
+        if (!Phaser.Geom.Rectangle.Contains(outer, x, y - 16)) continue;
+        const ch = (map.ground[Math.floor((y - 4) / T)] || '')[Math.floor(x / T)];
+        if (!ch || !'cpdgo'.includes(ch) || bloq(x, y - 4) || bloq(x, y - 40)) continue;
+        lugares.push({ x, y, d: Math.hypot(Math.max(qx - x, 0, x - (qx + qw)), Math.max(qy - y, 0, y - (qy + qh))) });
+      }
+    }
+    lugares.sort((a, b) => a.d - b.d);
+    this.crowd = {
+      state: 'hidden', lastSay: 0,                                               // hidden -> entering -> watching -> leaving -> hidden
+      members: lugares.slice(0, CROWD_MAX).map((l) => {
+        // cada um olha pra quadra: de frente (norte), de costas (sul) ou de lado (leste/oeste)
+        const ox = l.x < qx ? qx - l.x : l.x > qx + qw ? l.x - (qx + qw) : 0;
+        const oy = l.y < qy ? qy - l.y : l.y > qy + qh ? l.y - (qy + qh) : 0;
+        let fr = 0, flip = false;
+        if (ox > oy) { fr = 6; flip = l.x > qx + qw; }
+        else fr = l.y < qy ? 0 : 3;
+        return {
+          sx: l.x, sy: l.y, x: l.x, y: l.y, s: null, state: 'gone', route: [], ri: 0, wait: 0, t: 0, speed: 0, jump: 0, vx: 0, vy: 0,
+          tex: Phaser.Math.RND.pick(['menino', 'menina']), tom: tomDe(l.x, l.y), fr, flip, sc: Phaser.Math.FloatBetween(0.95, 1.04),
+          jx: Phaser.Math.Between(-5, 5), jy: Phaser.Math.Between(-2, 2),
+          ph: Math.random() * 6.28, bobA: Phaser.Math.RND.pick([0, 0, 0.8, 1.2]), bobF: Phaser.Math.Between(5, 9),
+        };
+      }),
+    };
+  }
+  crowdView(margem) {
+    const v = this.cameras.main.worldView;
+    return new Phaser.Geom.Rectangle(v.x - margem, v.y - margem, v.width + margem * 2, v.height + margem * 2);
+  }
+  // mapa de distância até a rua mais perto (calcula uma vez só). Quadra, casas e postes são parede.
+  crowdField() {
+    if (this.crowdDist) return this.crowdDist;
+    const { W, H } = map, dist = new Int16Array(W * H).fill(-1), fila = [];
+    for (let i = 0; i < W * H; i++) {
+      if ('#-|'.includes(map.ground[(i / W) | 0][i % W]) && !this.crowdBlock[i]) { dist[i] = 0; fila.push(i); }
+    }
+    for (let h = 0; h < fila.length; h++) {
+      const cur = fila[h], cx = cur % W, cy = (cur / W) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const ni = ny * W + nx;
+        if (dist[ni] < 0 && !this.crowdBlock[ni]) { dist[ni] = dist[cur] + 1; fila.push(ni); }
+      }
+    }
+    return (this.crowdDist = dist);
+  }
+  // rota do lugar até a rua (lista de tiles). Nunca passa pela quadra nem por casa.
+  crowdRoute(tx, ty) {
+    const f = this.crowdField(), { W, H } = map, rota = [];
+    let cur = ty * W + tx;
+    if (f[cur] < 0) return null;
+    while (f[cur] > 0 && rota.length < 200) {
+      const cx = cur % W, cy = (cur / W) | 0;
+      let best = -1, bd = f[cur];
+      for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const ni = ny * W + nx;
+        if (f[ni] >= 0 && f[ni] < bd) { bd = f[ni]; best = ni; }
+      }
+      if (best < 0) break;
+      rota.push(best); cur = best;
+    }
+    return rota;
+  }
+  // tocou na bola
+  crowdCheer() {
+    const st = this.crowd.state;
+    if (st === 'hidden') this.crowdShow();
+    else if (st === 'watching') this.crowdShout(false);
+  }
+  // eles entram pela rua, vindo de fora da tela, e ocupam os lugares
+  crowdShow() {
+    const c = this.crowd, vb = this.crowdView(56);
+    c.state = 'entering';
+    c.members.forEach((m) => {
+      const r = this.crowdRoute(Math.floor(m.sx / T), Math.floor((m.sy - 4) / T));
+      m.route = r ? r.reverse() : [];
+      let k = 0;                                                                 // começa no 1º ponto da rota que já está perto da tela
+      while (k < m.route.length) { const w = this.wp(m.route[k]); if (Phaser.Geom.Rectangle.Contains(vb, w.x + m.jx, w.y + m.jy - 22)) break; k++; }
+      if (k >= m.route.length) { m.ri = m.route.length; m.x = m.sx; m.y = m.sy; }
+      else { const w = this.wp(m.route[k]); m.ri = k + 1; m.x = w.x + m.jx; m.y = w.y + m.jy; }
+      m.state = 'wait-in'; m.wait = Phaser.Math.FloatBetween(0, 1.6); m.speed = Phaser.Math.Between(110, 150); m.t = 0; m.jump = 0;
+    });
+  }
+  // E: manda a galera embora. Saem pela rua e somem.
+  crowdLeave() {
+    const c = this.crowd; c.state = 'leaving';
+    c.members.forEach((m) => {
+      if (m.state !== 'stand') return;
+      m.route = this.crowdRoute(Math.floor(m.sx / T), Math.floor((m.sy - 4) / T)) || [];
+      m.ri = 0; m.t = 0; m.state = 'wait-out'; m.wait = Phaser.Math.FloatBetween(0, 1.2); m.speed = Phaser.Math.Between(120, 170);
+    });
+  }
+  // sprite do menino/menina pintado de cor chapada (só a silhueta, com pés)
+  crowdSpawn(m) {
+    m.s = this.add.sprite(m.x, m.y, m.tex, m.fr).setOrigin(0.5, 1).setDepth(m.y).setScale(m.sc).setFlipX(m.flip).setTintFill(CROWD_TONS[m.tom]);
+    m.state = 'enter';
+  }
+  crowdFace(m) { m.s.anims.stop(); m.s.setFrame(m.fr).setFlipX(m.flip); }   // parado: olha pra quadra
+  crowdAnim(m) {                                                              // andando: anima na direção que está indo
+    const k = Math.abs(m.vx) > Math.abs(m.vy) ? 'side' : m.vy > 0 ? 'down' : 'up';
+    m.s.setFlipX(k === 'side' && m.vx < 0);
+    m.s.anims.play(`${m.tex}-${k}`, true);
+  }
+  crowdMove(m, tx, ty, dt) {
+    const dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy), passo = m.speed * dt;
+    if (d <= passo) { m.x = tx; m.y = ty; return true; }
+    m.vx = dx / d; m.vy = dy / d;
+    m.x += m.vx * passo; m.y += m.vy * passo; return false;
+  }
+  crowdShout(first) {
+    const c = this.crowd, now = this.time.now;
+    if (!first && now - c.lastSay < 1200) return;
+    c.lastSay = now;
+    const vb = this.crowdView(0);
+    const vis = Phaser.Utils.Array.Shuffle(c.members.filter((m) => m.state === 'stand' && Phaser.Geom.Rectangle.Contains(vb, m.x, m.y)));
+    const frases = Phaser.Utils.Array.Shuffle([...CROWD_FRASES]);
+    vis.slice(0, 4).forEach((m, i) => this.time.delayedCall(i * 160, () => { if (m.s) this.crowdSay(m, frases[i % frases.length]); }));
+  }
+  crowdSay(m, txt) {
+    const t = this.add.text(0, 0, txt, { fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#111111' }).setOrigin(0.5).setResolution(2);
+    const w = t.width + 10, h = t.height + 6;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 4).fillTriangle(-3, h / 2 - 1, 3, h / 2 - 1, 0, h / 2 + 4);
+    g.lineStyle(1, 0x000000, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
+    const b = this.add.container(m.x, m.y - 56, [g, t]).setDepth(20000);
+    this.tweens.add({ targets: b, y: b.y - 12, alpha: 0, delay: 500, duration: 900, onComplete: () => b.destroy() });
+    m.jump = 0.25;                                                               // pulinho
+  }
+  crowdUpdate(dt) {
+    const c = this.crowd;
+    if (c.state === 'hidden') return;
+    dt = Math.min(dt, 0.05);
+    const p = this.player, q = map.quadra, qx = q.x * T, qy = q.y * T, agora = this.time.now / 1000;
+    // enquanto tiver multidão o jogador fica preso na quadra
+    const px = Phaser.Math.Clamp(p.x, qx - 6, qx + q.w * T + 6), py = Phaser.Math.Clamp(p.y, qy + 12, qy + q.h * T - 2);
+    if (px !== p.x) { p.x = px; p.setVelocityX(0); }
+    if (py !== p.y) { p.y = py; p.setVelocityY(0); }
+    const vb = this.crowdView(56);
+    let vivos = 0, parados = 0;
+    c.members.forEach((m) => {
+      if (m.state === 'gone') return;
+      vivos++;
+      if (m.state === 'wait-in') { m.wait -= dt; if (m.wait > 0) return; this.crowdSpawn(m); }
+      else if (m.state === 'wait-out') { m.wait -= dt; if (m.wait <= 0) m.state = 'leave'; }
+      else if (m.state === 'enter') {
+        const w = m.ri < m.route.length ? this.wp(m.route[m.ri]) : null;
+        if (this.crowdMove(m, w ? w.x + m.jx : m.sx, w ? w.y + m.jy : m.sy, dt)) {
+          if (w) m.ri++; else { m.state = 'stand'; m.s.setDepth(m.sy); this.crowdFace(m); }
+        }
+      } else if (m.state === 'leave') {
+        m.t += dt;
+        const w = m.ri < m.route.length ? this.wp(m.route[m.ri]) : null;
+        if (!w || (m.t > 0.4 && !Phaser.Geom.Rectangle.Contains(vb, m.x, m.y - 22))) {   // chegou na rua ou saiu da tela: some
+          m.s.destroy(); m.s = null; m.state = 'gone'; vivos--; return;
+        }
+        if (this.crowdMove(m, w.x + m.jx, w.y + m.jy, dt)) m.ri++;
+      }
+      if (m.state === 'stand') parados++;
+      if (m.s) {
+        const andando = m.state === 'enter' || m.state === 'leave';
+        if (andando) this.crowdAnim(m);
+        const bob = andando ? 0 : (Math.sin(agora * m.bobF + m.ph) * 0.5 + 0.5) * m.bobA;
+        if (m.jump > 0) m.jump -= dt;
+        const pulo = m.jump > 0 ? Math.sin(Math.PI * (1 - m.jump / 0.25)) * 6 : 0;
+        if (andando) m.s.setDepth(m.y);
+        m.s.setPosition(m.x, m.y - bob - pulo);
+      }
+    });
+    if (c.state === 'entering' && vivos > 0 && parados === vivos) { c.state = 'watching'; this.crowdShout(true); }
+    if (c.state === 'leaving' && vivos === 0) c.state = 'hidden';
+  }
   buildSunset() {
     const cw = this.cameras.main.width, ch = this.cameras.main.height;
     // 1) multiplica tudo por uma cor quente
@@ -575,11 +776,13 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     }
     if (this.juggling) hint = 'ESPAÇO: toca quando a sombra brilhar';
     else if (!hint && !this.riding && this.nearBall) hint = 'ESPAÇO: embaixadinha';
+    else if (!hint && !this.riding && this.crowd.state === 'watching') hint = 'E: mandar a galera embora';
     setHint(state.paused ? null : hint);
     if (consumeAction() && !state.paused && !this.juggling) {
       if (this.riding) this.mountOrDismount();
       else if (target === 'moto') this.mountOrDismount();
       else if (target) this.openMural(target);
+      else if (this.crowd.state === 'watching' && state.actionSrc === 'e') this.crowdLeave();
     }
 
     // bola: para quando fica bem lenta
@@ -589,6 +792,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     this.updateJuggle(dt);
 
     this.dogs.forEach((d) => this.updateDog(d, dt));
+    this.crowdUpdate(dt);
     p.setDepth(p.y); this.nameLabel.setPosition(p.x, p.y - (this.riding ? 50 + 12 * this.wheelie : 46)).setVisible(true);
     this.moto.setDepth(this.moto.y);
   }
