@@ -1,79 +1,52 @@
-# CONTEXTO DO PROJETO: "PIXEL DA QUEBRADA"
+# PROJETO: "PIXEL DA QUEBRADA"
 
-Eu sou o Maruã, profissional multimídia (filmagem, edição, conteúdo). Falo em português do Brasil, bem informal, com gíria. Responde sempre assim.
-Vou te anexar o .zip do projeto. Leia o README.md dele antes de mexer em qualquer coisa.
+Sou o Maruã, multimídia (filmagem, edição, conteúdo). Fala comigo em português do Brasil, informal, direto, sem enrolação. Respostas curtas: só o que eu devo fazer. Não inventa moda. Se tiver dúvida, pergunta antes. Respeita o que já existe, mexe só no que eu pedir e lista os arquivos alterados. Não codar nada até eu liberar.
+Lê o README.md do ZIP antes de qualquer coisa.
 
 ## 1. O que é
-Jogo web 2D em pixel art, visual estilo Pokémon FireRed (visão de cima, tiles, personagem andando em 4 direções). Ele mostra a periferia e ensina sobre arte periférica. Slogan: "Cada muro conta uma história."
-
-Origem: é um briefing de faculdade. Ele pede um jogo digital + offline (cartaz com QR code na universidade), uma jornada visualizável (explorar → encontrar obra → ler card → responder pergunta), um infográfico sobre arte periférica e um formulário curto de devolutiva do público por QR code. Prazo de desenvolvimento: 1 mês. Escopo enxuto de propósito: 1 mapa, 3 artistas/murais, 3 cards, 3 perguntas, tela final com os cards coletados.
-Cuidado de conteúdo: tom jovem, curioso, educativo, sem estereótipo nem romantização das desigualdades. Os artistas devem ser da periferia (idealmente um coletivo local) e as informações precisam ser confirmadas em fontes confiáveis. Ainda NÃO definimos os 3 artistas, os cards são placeholder.
+Jogo web 2D pixel art, visão de cima estilo Pokémon FireRed, sobre arte periférica. Slogan: "Cada muro conta uma história." Briefing de faculdade: jogo + QR code, 3 murais/artistas, cards com pergunta, infográfico, formulário de devolutiva.
 
 ## 2. Stack
-- Phaser 3 + Vite (JavaScript, módulos ES)
-- Supabase: guarda os cards (artista, texto, imagem, pergunta, opções, resposta) e o feedback
-- GitHub (repo) + Vercel (deploy, framework Vite, build `npm run build`, saída `dist`)
-- VS Code
-- Python (Pillow/scipy/numpy) só nas ferramentas de geração de assets e mapa
+Phaser 3 + Vite (JS, módulos ES) · Supabase (cards/feedback, com fallback em src/cards.js) · GitHub (já subido) · Vercel (só no fim) · Python (Pillow/numpy) nas ferramentas de assets e mapa.
 
-## 3. Decisões técnicas importantes
-- Tile do jogo = 32px (16 base x2). As peças vieram de IA em resolução alta (não são 16x16 reais), então reduzi pra 32 pra não perder detalhe. Tela do jogo 480x320 (15x10 tiles), escalada com FIT e pixelArt/nearest.
-- Movimento em 4 direções (sem diagonal), movimento livre (não grid), com física Arcade.
-- Interface (tela inicial, diálogo, HUD, card, joystick) é feita em DOM/CSS por cima do canvas, NÃO em Phaser. Fonte "Press Start 2P" do Google Fonts.
-- O mapa é gerado por `tools/gen_map.py`, que grava `src/mapdata.json` e `mapa_preview.png`. Pra mudar o mapa, edita o script e roda de novo.
-- O chão é baked num canvas só. Casas/props/personagens usam depth por Y (quem tem Y maior fica na frente).
-- Sem Supabase configurado, o jogo usa cards de exemplo (fallback em `src/cards.js`).
+## 3. Como o código funciona hoje
+- Tela 480x320, tile 32px, pixelArt, escala FIT. Movimento em 4 direções, física Arcade.
+- UI em DOM/CSS por cima do canvas (index.html, style.css, ui.js). Fonte Press Start 2P.
+- src/game.js (GameScene): buildGround (chão baked em canvas), buildWorld (casas, murais, postes, pontos de ônibus, varais, fios), buildNav + findPath (A* pros cachorros; navBlock marca casas/murais/postes/pontos), buildPlayer, buildMoto, buildBall, buildDog, buildSunset, buildBusLight, update.
+- src/state.js: estado compartilhado + getMove().
+- src/mapdata.json é GERADO por tools/gen_map.py (mapa 50x36, ruas, praça, vielas A/B1/B2/C/F, quadra em x34 y3 9x6, 50 casas, 3 murais, 8 postes de luz, 5 fios, 4 pontos de ônibus, 4 varais). O script é aleatório por seed (7). NÃO regerar sem eu mandar: o layout atual das casas tem que ser mantido.
+- Depth por Y (quem tem Y maior fica na frente). Hoje varais e fios usam depth fixo 9000.
+- Assets em public/assets/{tiles,props,sprites}. Originais em raw/. Scripts: build_assets.py, build_sprites.py, build_grau.py.
+- Sprites: personagem 32x44 (menino/menina), moto 52x48, grau 62x45, cachorro 96x96 (grade 3x3 de 32x32: baixo, cima, lado), bola, poste_apagado, poste_aceso (existe e NÃO é usado), casas 96x128, quadra 288x192.
 
-## 4. Estrutura do projeto
-- `index.html`, `src/style.css`: telas DOM
-- `src/main.js`: config do Phaser (expõe `window.__game` pra debug)
-- `src/game.js`: cena principal (mapa, jogador, moto, bola, cachorro, luz do ponto, interações)
-- `src/ui.js`: teclado, tela inicial, diálogo estilo GBA, HUD, modal do card, joystick virtual + botão A
-- `src/state.js`: estado compartilhado (sexo, nome, teclas, joystick, ação, murais encontrados)
-- `src/cards.js`: busca no Supabase com fallback
-- `src/mapdata.json`: dados do mapa (gerado)
-- `supabase/schema.sql`: tabelas `cards` e `feedback` com RLS (leitura pública de cards, insert público no feedback)
-- `raw/`: imagens originais das peças (fundo branco)
-- `tools/`: `slice.py` (recorta e tira o fundo), `build_assets.py` (tiles, casas, quadra), `build_sprites.py` (personagens, moto, cachorro, bola, poste, ponto), `gen_map.py`
-- `public/assets/{tiles,props,sprites}`: tudo que o jogo carrega
-- `.env.example`: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+## 4. Mecânicas que já existem
+- Tela inicial (Mano/Mina + nome) → tutorial em diálogo → mundo aberto com HUD "MURAIS 0/3".
+- Teclado: setas/WASD andar · E interagir/montar/descer · ESPAÇO dá grau de moto (segurar). Celular: joystick + A (interage/grau) + B (descer).
+- Moto: monta com E perto dela, só anda no asfalto, 215 vs 92 a pé.
+- Bola na quadra: chuta ao encostar, desliza e quica nos limites.
+- 2 cachorros perto da calçada (início): perseguem a moto, latem "AU!", desistem e voltam pelo caminho (A*).
+- Pontos de ônibus: luz pisca (mau contato), aceso ou apagado.
+- 3 murais com "!" → card + pergunta de múltipla escolha.
+- Clima: fim de tarde (TARDE em buildSunset: tint multiply + vinheta + brilho nos pontos).
 
-## 5. Fluxo do jogo
-1. Tela inicial: escolher Mano ou Mina, digitar o nome (salvo no localStorage), INICIAR.
-2. Tutorial em caixa de diálogo (5 falas): controles, moto, bola/cachorro, objetivo.
-3. Mundo aberto com HUD (nome + "MURAIS 0/3").
-4. Controles: setas/WASD = andar; E (ou botão A no celular) = interagir; joystick virtual só aparece em dispositivo touch.
-5. Em cada mural: aparece a dica "E: ver o mural" e abre um card com título, artista, texto e uma pergunta de múltipla escolha com feedback. Fechar o card conta o mural como encontrado, e o "!" amarelo some.
-6. Ao achar os 3 murais: diálogo final de parabéns (placeholder).
+## 5. O QUE FAZER AGORA (nesta ordem)
 
-## 6. Mapa (baseado no meu esboço em ASCII)
-Mapa 50x36 tiles. Rua principal em curva começando no INÍCIO (embaixo à esquerda), com a rua subindo e virando pra direita. Praça no centro. Viela A pro norte, viela C ligando a praça à rua. Becos sem saída B1 (oeste) e B2 (leste). Quadra de futebol no canto superior direito, ligada por uma viela vertical. Casas em fileiras (68 casas). Ponto de ônibus na calçada da rua principal, postes pela calçada, varal e fios como decoração.
-Os 3 murais ficam nos finais de beco: B1 (muro verde), B2 (muro rosa) e fim da viela A (muro amarelo).
+1. CONTROLES DE TOQUE: joystick, A e B só aparecem em celular de verdade. No PC não aparece nada. Trocar a detecção de maxTouchPoints por (pointer: coarse) / (hover: none).
+2. TEXTO "montar na moto": no PC "E: montar na moto". No celular "A: montar na moto". Tecla continua E.
+3. TEXTO de moto montada: no PC "E: descer • ESPAÇO: grau". No celular "B: descer • A: grau". Teclas continuam E e ESPAÇO.
+4. POSTE DE LUZ x POSTE DE FIOS: nunca um por cima do outro. Hoje o fio nasce em x = poste − 1 e sobrepõe. Separar (distância mínima entre os dois), no mapa inteiro, sem regerar as casas. Conferir no mapa_preview.png.
+5. FIOS: o poste de fios NÃO tem colisão. O jogador (a pé ou de moto) passa na frente dele quando estiver mais ao sul (rua). Depth pela base do sprite.
+6. TRAVES + GOL: traves nos dois lados da quadra, a bola colide nelas. Gol conta ponto (placar no HUD). Embaixadinha: a pé, perto da bola, aperta ESPAÇO e o personagem faz a animação com a bola. No celular entra um botão novo (só aparece perto da bola). De moto, ESPAÇO continua sendo grau.
+7. MULTIDÃO: grande (dezenas), silhuetas escuras sem rosto, estilo desenho animado, no mesmo estilo do jogo. Só aparece quando eu TOCO NA BOLA. Grita balões tipo "UAU!", "JOGADOR NÚMERO 1!", "PRÓXIMO NEYMAR!". Quando eu SAIO da quadra, eles saem andando pelo mapa (findPath/navBlock, nunca por cima de casa). Voltam só quando eu tocar na bola de novo.
+8. SKATE: no final da rua principal (seguindo reto até o fim), no lugar das casas azul e rosa dali. Remover o poste de luz e o de fios dessa área. Rapaziada parada conversando.
+9. NOITE: trocar o fim de tarde por noite (tint azulado escuro, vinheta, brilhos). Acender TODOS os postes de luz (usar poste_aceso.png, que já existe) com brilho. Manter a luz piscando dos pontos de ônibus.
+10. BAR DO SEU ZÉ: na esquina da casa amarela (saindo do início, reto e subindo pela rua que vai pra cima).
+12. CACHORROS: 4, sentados olhando pra rua. Manter o caramelo claro (o 2º, tint 0xd9b38c). O 1º, que hoje é marrom-alaranjado, vira marrom chocolate. Criar mais 2: um preto e um preto e branco.
+Toda arte nova (bar, padaria, traves, brinquedos, pista, NPCs, cachorros sentados) eu gero no mesmo estilo do jogo.
+13. PRACINHA das crianças no meio (praça central, x10–21, y12–19): brinquedos + crianças brincando.
 
-## 7. Mecânicas extras (ideias minhas, já implementadas)
-- Moto: fica parada na rua perto do início. E monta (anda bem mais rápido, 215 vs 92) e E desce. Só anda em tile de asfalto, nas vielas tem que descer.
-- Bola: na quadra. Encostar chuta na direção do personagem, ela desliza, freia e quica nos limites da quadra.
-- Cachorro: perto da calçada. Se eu passar de moto rápido e perto, ele sai correndo atrás latindo "AU AU!", fica pra trás (velocidade menor que a moto), desiste e volta pro lugar. A pé, ele ignora.
-- Luz do ponto de ônibus: 2 imagens (acesa/apagada) alternando em intervalos irregulares, tipo mau contato.
+## 6. Pendências antigas (NÃO mexer agora)
+Definir os 3 artistas e os cards · Supabase + .env · tela final com cards coletados · formulário de feedback · infográfico + cartaz com QR · polir o mapa · testar no celular real · deploy na Vercel (só quando tudo acima estiver pronto).
 
-## 8. Estado atual
-FEITO e testado em navegador headless (sem erros): tela inicial, tutorial, mapa completo, personagens a pé e de moto (Mano e Mina), moto, bola, cachorro, luz piscando, 3 murais com card + pergunta, HUD, joystick/botão A no celular, build de produção.
-PENDENTE:
-- Definir os 3 artistas e escrever os cards e perguntas (e mandar pro Supabase)
-- Criar o projeto no Supabase, rodar o schema.sql, preencher o .env e as variáveis na Vercel
-- Tela final com os cards coletados
-- Formulário de avaliação (tabela `feedback` já existe no schema; falta a interface)
-- Infográfico sobre arte periférica e cartaz com QR code
-- Polir o mapa (as casas ficaram muito repetidas, dá pra variar), mais props e vida no cenário, e conferir se a tela inicial fica boa no celular
-- Testar no celular de verdade e subir na Vercel
-- Opcional: música/sons, a pose de wheelie da moto (os sprites já existem nas imagens originais, mas não usei)
-
-## 9. Como rodar
-`npm install` e `npm run dev` (http://localhost:5173). Regerar assets: `PYTHONPATH=tools python3 tools/build_sprites.py`. Regerar mapa: `python3 tools/gen_map.py`.
-
-## 10. Como quero que tu me ajude
-- Respeita o que já existe, mexe só no que eu pedir e me diz quais arquivos mudaram.
-- Explica de forma simples, passo a passo, quando eu tiver que fazer algo no GitHub, Supabase ou Vercel.
-- Se algo no briefing ou no conteúdo cultural estiver incerto, avisa em vez de inventar (principalmente sobre os artistas).
-
-Minha primeira pergunta/pedido neste chat é: [ESCREVE AQUI O QUE TU QUER FAZER AGORA]
+## 7. Como trabalhar
+Antes de codar: confirma o plano do item em 3 linhas e espera meu "bora". Um item por vez, testa no navegador, me diz os arquivos que mudou. Se faltar arte (bar, padaria, traves, brinquedos, skate, NPCs), avisa antes e pergunta como eu quero resolver.

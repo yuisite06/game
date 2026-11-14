@@ -2,7 +2,8 @@ import { state } from './state.js';
 import { loadCard } from './cards.js';
 
 const $ = (id) => document.getElementById(id);
-const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+// celular de verdade: dedo é o ponteiro principal e não tem mouse/hover (notebook com tela touch NÃO conta)
+const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---------- teclado ----------
 const norm = (k) => (k.length === 1 ? k.toLowerCase() : k);
@@ -14,7 +15,7 @@ window.addEventListener('keydown', (e) => {
   if (['ArrowUp','ArrowDown','w','s'].includes(k)) state.lastAxis = 'y';
   state.keys.add(k);
   if (!e.repeat) {
-    if (k === ' ') pressAction('space');                       // espaço: interage a pé, dá GRAU de moto
+    if (k === ' ') { pressJuggle(); pressAction('space'); }                   // espaço: interage a pé, dá GRAU de moto
     else if (k === 'e' || k === 'Enter') pressAction('e');     // E: interage / desce da moto
   }
 });
@@ -28,6 +29,16 @@ export function pressAction(src = 'e') {
   if (!$('card').classList.contains('hidden')) return;
   if (src === 'space' && state.riding) return;     // de moto, espaço/A = grau (o jogo lê a tecla segurada)
   state.action = true;
+}
+
+// embaixadinha: ESPAÇO a pé (ou botão BOLA no celular). O jogo só aceita se a bola estiver perto
+export function pressJuggle() {
+  if (!$('dialog').classList.contains('hidden') || !$('card').classList.contains('hidden')) return;
+  if (state.riding) return;
+  state.juggle = true;
+}
+export function setJuggleUI(show) {
+  const b = $('btnJ'); if (b) b.classList.toggle('hidden', !(isTouch && show));
 }
 
 // o jogo avisa quando monta/desce da moto (mostra ou esconde o botão B no celular)
@@ -60,12 +71,13 @@ $('dialog').addEventListener('pointerdown', (e) => { e.preventDefault(); nextDia
 export function setHint(text) {
   const h = $('hint'); if (!text) return h.classList.add('hidden');
   let t = text;
-  if (isTouch) t = state.riding ? text.replace('E:', 'B:').replace('ESPAÇO:', 'A:') : text.replace(/^E:/, 'A:');
+  if (isTouch) t = state.riding ? text.replace('E:', 'B:').replace('ESPAÇO:', 'A:') : text.replace(/^E:/, 'A:').replace('ESPAÇO:', 'BOLA:');
   h.textContent = t; h.classList.remove('hidden');
 }
 export function updateHud() {
   $('hud-name').textContent = state.name;
   $('hud-murais').textContent = `MURAIS ${state.found.size}/${state.totalMurais}`;
+  $('hud-gols').textContent = `GOLS ${state.gols || 0}`;
 }
 
 // ---------- card do mural ----------
@@ -120,7 +132,11 @@ function setupTouch() {
 
   // B: descer da moto (só aparece de moto)
   const B = $('btnB');
-  if (B) B.addEventListener('pointerdown', (e) => { e.preventDefault(); pressAction('e'); });
+    if (B) B.addEventListener('pointerdown', (e) => { e.preventDefault(); pressAction('e'); });
+
+  // BOLA: embaixadinha (só aparece perto da bola)
+  const J = $('btnJ');
+  if (J) J.addEventListener('pointerdown', (e) => { e.preventDefault(); pressJuggle(); });
 }
 
 // ---------- tela inicial ----------

@@ -1,12 +1,51 @@
 import Phaser from 'phaser';
 import map from './mapdata.json';
 import { state, getMove, consumeAction } from './state.js';
-import { showDialog, setHint, updateHud, openMural, setRidingUI } from './ui.js';
+import { showDialog, setHint, updateHud, openMural, setRidingUI, setJuggleUI } from './ui.js';
 
 const T = map.T;
 const ROAD = new Set(['#', '-', '|', 'b', 'o']);          // moto só anda aqui
 const TILE_KEY = { '#':'asfalto', '-':'asfalto_faixa_h', '|':'asfalto_faixa', c:'calcada', p:'piso_rachado', g:'grama', d:'terra', b:'bueiro', o:'poca', s:'escada' };
 const WALK = 92, RIDE = 215, DOG_SPEED = 150, DOG_RETURN = 85;
+const JUG = { PER: 0.7, JANELA: 0.62, LIMITE: 1.12 };   // embaixadinha: tempo de cada toque (s) e janela de acerto
+
+// ---- limpa postes: nada colado em ponto de ônibus e luz nunca em cima de fio ----
+(function limpaPostes() {
+  const FIO_W = 96, FIO_H = 44, M = 24;
+  const pontos = map.pontos || [{ ...map.ponto }];
+  const livre = (nx, py) => { const ch = (map.ground[py] || '')[nx]; return !!ch && 'cpd'.includes(ch); };
+  // 1) tira fio perto de ponto de ônibus (mesma calçada, até 4 tiles)
+  map.fios = map.fios.filter((f) => !pontos.some((p) => Math.abs(f.y * T + FIO_H - p.y * T) < 20 && Math.abs(p.x - (f.x + 1.5)) <= 4));
+  // 2) poste de luz nunca perto de ponto (2 tiles) nem em cima de fio
+  const pertoPonto = (nx, py) => pontos.some((p) => p.y - 1 === py && Math.abs(p.x - nx) <= 2);
+  const fioDe = (cx, base) => map.fios.find((f) => Math.abs(f.y * T + FIO_H - base) < 20 && cx > f.x * T - M && cx < f.x * T + FIO_W + M);
+  const orig = map.postes;
+  map.postes = orig.map(([x, y]) => {
+    const base = (y + 1) * T, f = fioDe(x * T + T / 2, base);
+    if (pertoPonto(x, y)) return null;
+    if (!f) return [x, y];
+    for (const nx of [f.x + 4, f.x - 2]) {
+      if (livre(nx, y) && !pertoPonto(nx, y) && !fioDe(nx * T + T / 2, base) && !orig.some(([ox, oy]) => oy === y && ox !== x && Math.abs(ox - nx) < 3)) return [nx, y];
+    }
+    return null;
+  }).filter(Boolean);
+})();
+
+// ---- separa poste de luz do poste de fios (nunca um em cima do outro) ----
+(function separaPostes() {
+  const FIO_W = 96, FIO_H = 44, M = 24;
+  const livre = (nx, py) => { const ch = (map.ground[py] || '')[nx]; return !!ch && 'cpd'.includes(ch); };
+  const fioDe = (cx, base) => map.fios.find((f) => Math.abs(f.y * T + FIO_H - base) < 20 && cx > f.x * T - M && cx < f.x * T + FIO_W + M);
+  const orig = map.postes;
+  map.postes = orig.map(([x, y]) => {
+    const base = (y + 1) * T, f = fioDe(x * T + T / 2, base);
+    if (!f) return [x, y];
+    for (const nx of [f.x + 4, f.x - 2]) {
+      if (livre(nx, y) && !fioDe(nx * T + T / 2, base) && !orig.some(([ox, oy]) => oy === y && ox !== x && Math.abs(ox - nx) < 3)) return [nx, y];
+    }
+    return null;
+  }).filter(Boolean);
+})();
 
 // ---- FIM DE TARDE: mexe aqui pra ajustar o clima ----
 const TARDE = {
@@ -50,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     this.buildPlayer();
     this.buildMoto();
     this.buildBall();
+    this.buildGoals();
     this.buildDog();
     this.buildSunset();
     this.buildBusLight();
@@ -127,7 +167,7 @@ export class GameScene extends Phaser.Scene {
       return { img, px, pb, modo, glow: null };
     });
     map.varais.forEach((v) => this.add.image(v.x * T, v.y * T, 'varal').setOrigin(0).setDepth(9000));
-    map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).setDepth(9000));
+map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).setDepth(f.y * T + 44));
   }
 
   // ------------------------------------------- navegação do cachorro (ruas)
@@ -245,10 +285,10 @@ export class GameScene extends Phaser.Scene {
 
   // -------------------------------------------------------------------- bola
   buildBall() {
-    const b = map.bola;
+    const b = { x: map.quadra.x + map.quadra.w / 2, y: map.quadra.y + map.quadra.h / 2 };   // centro exato da quadra
     this.ball = this.physics.add.sprite(b.x * T, b.y * T, 'bola').setCircle(5, 0, 0);
     this.ball.setBounce(0.85).setCollideWorldBounds(true);
-    this.ball.body.setBoundsRectangle(this.court);
+    this.ball.body.setBoundsRectangle(new Phaser.Geom.Rectangle(this.court.x - 16, this.court.y, this.court.width + 32, this.court.height));
     this.ball.body.useDamping = true; this.ball.setDrag(0.3, 0.3);
     this.lastKick = 0;
   }
@@ -259,6 +299,102 @@ export class GameScene extends Phaser.Scene {
     const ang = Phaser.Math.Angle.Between(p.x, p.y - 4, this.ball.x, this.ball.y);
     const sp = Math.max(150, v * 1.7 + 80);
     this.ball.setVelocity(Math.cos(ang) * sp, Math.sin(ang) * sp);
+  }
+    // ---------------------------------------------------------------- traves e gol
+  buildGoals() {
+    const q = map.quadra, qx = q.x * T, qy = q.y * T;
+    const g = this.add.graphics().setDepth(-8);
+    const CREME = 0xefe6c8, REDE = 0x2a2a36, MALHA = 0x5a5a70, BORDA = 0x1a1a22;
+    const gol = (x0, x1, boca, backEsq) => {
+      g.fillStyle(REDE, 1).fillRect(qx + x0, qy + 80, x1 - x0, 32);
+      g.fillStyle(MALHA, 1);
+      for (let x = x0; x < x1; x += 4) g.fillRect(qx + x, qy + 80, 1, 32);
+      for (let y = 80; y < 112; y += 4) g.fillRect(qx + x0, qy + y, x1 - x0, 1);
+      g.fillStyle(CREME, 1);
+      g.fillRect(qx + x0, qy + 80, x1 - x0, 2); g.fillRect(qx + x0, qy + 110, x1 - x0, 2);
+      g.fillRect(backEsq ? qx + x0 : qx + x1 - 2, qy + 80, 2, 32);
+      [79, 109].forEach((y) => {
+        g.fillStyle(BORDA, 1).fillRect(qx + boca - 2, qy + y - 1, 5, 6);
+        g.fillStyle(CREME, 1).fillRect(qx + boca - 1, qy + y, 3, 4);
+      });
+    };
+    gol(-8, 12, 12, true);        // gol da esquerda
+    gol(274, 296, 274, false);    // gol da direita
+
+    // paredes invisíveis: só deixam a bola e o jogador entrarem pela boca do gol
+    this.goalWalls = this.physics.add.staticGroup();
+    [[-8, 8, 20, 74], [-8, 110, 20, 74], [274, 8, 22, 74], [274, 110, 22, 74]].forEach(([x, y, w, h]) => {
+      const z = this.add.zone(qx + x + w / 2, qy + y + h / 2, w, h);
+      this.physics.world.enable(z, Phaser.Physics.Arcade.STATIC_BODY);
+      this.goalWalls.add(z);
+    });
+    this.physics.add.collider(this.ball, this.goalWalls);
+    this.physics.add.collider(this.player, this.goalWalls);
+    this.goalLock = false;
+  }
+  checkGoal() {
+    if (this.goalLock || this.juggling) return;
+    const q = map.quadra, qx = q.x * T, qy = q.y * T, b = this.ball;
+    const naBoca = b.y > qy + 82 && b.y < qy + 110;
+    if (naBoca && (b.x < qx + 6 || b.x > qx + q.w * T - 6)) this.goal();
+  }
+  goal() {
+    this.goalLock = true;
+    state.gols = (state.gols || 0) + 1; updateHud();
+    this.cameras.main.shake(180, 0.004);
+    const t = this.add.text(this.ball.x, this.ball.y - 20, 'GOL!', { fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#ffd23f', stroke: '#000', strokeThickness: 4 })
+      .setOrigin(0.5).setResolution(2).setDepth(20000);
+    this.tweens.add({ targets: t, y: t.y - 22, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
+    this.time.delayedCall(1400, () => {            // bola volta pro centro
+      this.ball.setPosition((map.quadra.x + map.quadra.w / 2) * T, (map.quadra.y + map.quadra.h / 2) * T).setVelocity(0, 0);
+      this.goalLock = false;
+    });
+  }
+  // ---------------------------------------------------------------- embaixadinha (ritmo)
+  updateJuggle(dt) {
+    const p = this.player, b = this.ball;
+    const pedido = state.juggle; state.juggle = false;
+    if (!this.juggling) {
+      const perto = !this.riding && !state.paused && Phaser.Math.Distance.Between(p.x, p.y - 6, b.x, b.y) < 44;
+      if (perto !== this.nearBall) { this.nearBall = perto; setJuggleUI(perto); }
+      if (pedido && perto && !this.goalLock) this.startJuggle();
+      return;
+    }
+    const { PER, JANELA, LIMITE } = JUG;
+    this.jugPh += dt / PER;                                   // 0 = bola subiu, 1 = bola nos pés
+    const naJanela = this.jugPh >= JANELA && this.jugPh <= LIMITE;
+    if (pedido) {
+      if (naJanela) { this.jugN++; this.jugPh = 0; this.jugText.setText(`${this.jugN}`); }   // acertou: bola sobe de novo
+      else return this.stopJuggle(true);                       // apertou cedo demais: caiu
+    } else if (this.jugPh > LIMITE) return this.stopJuggle(true);   // passou do tempo: caiu
+    const x = Math.min(this.jugPh, 1), h = 4 * x * (1 - x);   // 0 -> 1 -> 0
+    b.setPosition(p.x, p.y - 4 - h * 30).setScale(1 + h * 0.25).setDepth(p.y + 1);
+    this.jugShadow.setPosition(p.x, p.y - 1).setScale(1 - h * 0.4).setDepth(p.y)
+      .setFillStyle(naJanela ? 0xffd23f : 0x000000, naJanela ? 0.85 : 0.35);
+    if (!(p.body.velocity.x || p.body.velocity.y)) p.setFrame([1, 0, 2, 0][Math.floor(this.time.now / 125) % 4]);
+    this.jugText.setPosition(p.x, p.y - 56);
+  }
+  startJuggle() {
+    this.juggling = true; this.jugPh = 0; this.jugN = 1;
+    this.ball.setVelocity(0, 0); this.ball.body.enable = false;
+    this.jugShadow = this.add.ellipse(0, 0, 9, 4, 0x000000, 0.35);
+    this.jugText = this.add.text(0, 0, '1', { fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: '#ffd23f', stroke: '#000', strokeThickness: 4 })
+      .setOrigin(0.5, 1).setResolution(2).setDepth(20000);
+    this.nearBall = true; setJuggleUI(true);
+  }
+  stopJuggle(caiu) {
+    if (!this.juggling) return;
+    this.juggling = false;
+    const p = this.player, b = this.ball, n = this.jugN;
+    const d = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[this.facing] || [0, 1];
+    b.setScale(1); b.body.enable = true;
+    b.body.reset(p.x + d[0] * 16, p.y - 4 + d[1] * 12);         // bola cai na frente dele
+    b.setVelocity(d[0] * 40, d[1] * 40);
+    this.jugShadow.destroy(); this.jugText.destroy();
+    this.nearBall = false; setJuggleUI(false);
+    const t = this.add.text(p.x, p.y - 56, caiu ? `CAIU! ${n} TOQUES` : `${n} TOQUES`, { fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', color: caiu ? '#ff4fa3' : '#3de0c8', stroke: '#000', strokeThickness: 4 })
+      .setOrigin(0.5, 1).setResolution(2).setDepth(20000);
+    this.tweens.add({ targets: t, y: t.y - 16, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
   }
 
   // ---------------------------------------------------------------- cachorros
@@ -382,6 +518,7 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ update
   update(_, delta) {
     const dt = delta / 1000, p = this.player, mv = getMove();
+    if (this.juggling && (this.riding || state.paused)) this.stopJuggle(false);
     const speed = this.riding ? RIDE : WALK;
     let vx = mv.x * speed, vy = mv.y * speed;
 
@@ -436,8 +573,10 @@ export class GameScene extends Phaser.Scene {
       const m = this.murais.find((m) => Phaser.Geom.Rectangle.Contains(m.rect, p.x, p.y - 4));
       if (m) { hint = 'E: ver o mural'; target = m; }
     }
+    if (this.juggling) hint = 'ESPAÇO: toca quando a sombra brilhar';
+    else if (!hint && !this.riding && this.nearBall) hint = 'ESPAÇO: embaixadinha';
     setHint(state.paused ? null : hint);
-    if (consumeAction() && !state.paused) {
+    if (consumeAction() && !state.paused && !this.juggling) {
       if (this.riding) this.mountOrDismount();
       else if (target === 'moto') this.mountOrDismount();
       else if (target) this.openMural(target);
@@ -446,6 +585,8 @@ export class GameScene extends Phaser.Scene {
     // bola: para quando fica bem lenta
     const bv = this.ball.body.velocity; if (Math.hypot(bv.x, bv.y) < 6) this.ball.setVelocity(0);
     this.ball.setDepth(this.ball.y);
+    this.checkGoal();
+    this.updateJuggle(dt);
 
     this.dogs.forEach((d) => this.updateDog(d, dt));
     p.setDepth(p.y); this.nameLabel.setPosition(p.x, p.y - (this.riding ? 50 + 12 * this.wheelie : 46)).setVisible(true);
