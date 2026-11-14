@@ -1,0 +1,488 @@
+{
+ "W": 50,
+ "H": 36,
+ "T": 32,
+ "ground": [
+  "pppppopggpppppopppoppdddppppgggggpddddpppppppdddpp",
+  "ppppppppgggppppopppppppgggpgggdgdgdddppppopppgggpp",
+  "pppppppppggpppppppppppppggpppppggpcdccpcpcccpdpppo",
+  "pppppppppogpppoppppppppggggppppggccccccccccppppppp",
+  "ppppppppppppppobpppppppdpgpppppppcccccccccccoppppp",
+  "ppdppoppppppodpsspppdddddgpppppopcccccccccccggpppp",
+  "pdppppppppppdddpbppppppppppppppppccccccccccgpppppp",
+  "ddppppppppppdddpppppppppppppppppppcccccccccgpppppp",
+  "pdppppppppppdddpppppppppppppppppppccccccccccpppppp",
+  "ppppppppppdddddppppppppppppppppppcpcccppccgcpppppp",
+  "pppppppppdddddddppgggppppgggppppoppppgppdddddppppp",
+  "ppppppppppddddpdppggpppppggpppppppppggppdddddpppgp",
+  "ppppppppppggcccpccccggppppgpppppppppggppddppppppgg",
+  "ppppppppppggccccccccggppppgpppppppppggppddpppppppg",
+  "ppppppgggpgcpcddddccccpppppppppppppppgpboppppppppp",
+  "ppppppppggccccddddccccppppppppppppppppsspppppddddp",
+  "ppppppppppccccddddccccpppppppppppppppopppdddddddpp",
+  "ppppppppppcpccddddccccppppppppppppppppppppppppdppp",
+  "dpppppppppggccccpcccggpppppppppppppppppbppppppdppp",
+  "dpppppppppggccccccccggpppppppppppppppppppppppppdpp",
+  "pppppdpppppdddppppppppppppppppppppppppppppppppdddp",
+  "pppppgpppppgdgpppppppccccpccccccccppccppcpcdccodpc",
+  "oppppdggpppppppppppppc#b##o###o#############o#####",
+  "pppppgggpppppppppppppp##-#-#-b-#-#-#-#-#-#-#-#-#-#",
+  "pppppgggpppppppppppppc#|############o##b#b########",
+  "pppgggggppppppoppgpppc###cccpcpccpcccppcccpccdcccc",
+  "pppggppppppppggppggggg#o#cpppppppppppppppppppppppp",
+  "ppppopppgpppgggppggggg###coppppppppppppppppppppppp",
+  "ppppppppgpppgggppggggg#b#cpppppppppppppppppppppppp",
+  "ppppppppppppppgssgggggo##cpppppppppppppppppppppppp",
+  "ccccdccccccccccppccccp#|#cppdccdcccccccccccpcccdcc",
+  "##############o###########################b##b####",
+  "-#-#-b-#-#-#-#-#-#-#-#####-#-#-#-#-#-#-#-#-#-#-#-#",
+  "#########o####b#######o########b#####ob###########",
+  "gggggggggggggcccccccccccccgggggggggggggggggggggggg",
+  "gggggggggggggoppppdddddpppgggggggggggggggggggggggg"
+ ],
+ "houses": [
+  {
+   "k": "casa_amarela",
+   "x": 0,
+   "y": 0,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 3,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 6,
+   "y": 2,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 11,
+   "y": 0,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 2,
+   "y": 7,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 6,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 9,
+   "y": 5,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 0,
+   "y": 11,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 3,
+   "y": 11,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 6,
+   "y": 10,
+   "tank": true
+  },
+  {
+   "k": "casa_amarela",
+   "x": 1,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 6,
+   "y": 18,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 2,
+   "y": 21,
+   "tank": false
+  },
+  {
+   "k": "casa_verde",
+   "x": 8,
+   "y": 22,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 11,
+   "y": 22,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 0,
+   "y": 26,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 5,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 9,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 17,
+   "y": 2,
+   "tank": false
+  },
+  {
+   "k": "casa_verde",
+   "x": 20,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 28,
+   "y": 2,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 18,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 21,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 24,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 27,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 30,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 22,
+   "y": 11,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 27,
+   "y": 11,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 30,
+   "y": 11,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 33,
+   "y": 10,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 42,
+   "y": 12,
+   "tank": true
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 45,
+   "y": 11,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 22,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 28,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 32,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 35,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 40,
+   "y": 17,
+   "tank": false
+  },
+  {
+   "k": "casa_verde",
+   "x": 43,
+   "y": 17,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 18,
+   "y": 22,
+   "tank": true
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 18,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 27,
+   "y": 26,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 31,
+   "y": 26,
+   "tank": true
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 34,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 37,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_verde",
+   "x": 40,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 43,
+   "y": 26,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 46,
+   "y": 26,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 46,
+   "y": 2,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 44,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 47,
+   "y": 7,
+   "tank": false
+  }
+ ],
+ "murais": [
+  {
+   "k": "muro_verde",
+   "x": 0,
+   "y": 15,
+   "id": "mural-1"
+  },
+  {
+   "k": "muro_rosa",
+   "x": 30,
+   "y": 15,
+   "id": "mural-2"
+  },
+  {
+   "k": "muro_amarelo",
+   "x": 15,
+   "y": 0,
+   "id": "mural-3"
+  }
+ ],
+ "postes": [
+  [
+   4,
+   30
+  ],
+  [
+   29,
+   30
+  ],
+  [
+   36,
+   30
+  ],
+  [
+   45,
+   30
+  ],
+  [
+   28,
+   25
+  ],
+  [
+   35,
+   25
+  ],
+  [
+   43,
+   25
+  ],
+  [
+   21,
+   22
+  ]
+ ],
+ "ponto": {
+  "x": 10,
+  "y": 31
+ },
+ "pontos": [
+  {
+   "x": 10,
+   "y": 31,
+   "modo": "pisca"
+  },
+  {
+   "x": 18,
+   "y": 31,
+   "modo": "apagado"
+  },
+  {
+   "x": 31,
+   "y": 22,
+   "modo": "aceso"
+  },
+  {
+   "x": 40,
+   "y": 31,
+   "modo": "pisca"
+  }
+ ],
+ "quadra": {
+  "x": 34,
+  "y": 3,
+  "w": 9,
+  "h": 6
+ },
+ "start": {
+  "x": 3,
+  "y": 32
+ },
+ "moto": {
+  "x": 8,
+  "y": 32
+ },
+ "dog": {
+  "x": 13,
+  "y": 34
+ },
+ "bola": {
+  "x": 38.5,
+  "y": 5.5
+ },
+ "varais": [
+  {
+   "x": 16,
+   "y": 9
+  },
+  {
+   "x": 15,
+   "y": 3
+  },
+  {
+   "x": 15,
+   "y": 26
+  },
+  {
+   "x": 38,
+   "y": 17
+  }
+ ],
+ "fios": [
+  {
+   "x": 28,
+   "y": 29.6
+  },
+  {
+   "x": 35,
+   "y": 29.6
+  },
+  {
+   "x": 44,
+   "y": 29.6
+  },
+  {
+   "x": 42,
+   "y": 20.6
+  },
+  {
+   "x": 35,
+   "y": 20.6
+  }
+ ],
+ "bueiro_nota": ""
+}

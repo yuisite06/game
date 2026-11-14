@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1b1230" />
+  <title>Pixel da Quebrada</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden"><span id="hud-name"></span><span id="hud-murais"></span></div>
+  <div id="hint" class="hidden"></div>
+
+  <!-- Caixa de diálogo (tutorial) -->
+  <div id="dialog" class="hidden"><p id="dialog-text"></p><span class="next">▼</span></div>
+
+  <!-- Card do mural -->
+  <div id="card" class="hidden">
+    <div class="card-box">
+      <div class="card-tag">CARD DESBLOQUEADO</div>
+      <h2 id="card-title"></h2>
+      <p id="card-artist"></p>
+      <p id="card-text"></p>
+      <div id="card-quiz" class="hidden">
+        <p id="card-question"></p>
+        <div id="card-options"></div>
+        <p id="card-feedback"></p>
+      </div>
+      <button id="card-close" class="btn">FECHAR</button>
+    </div>
+  </div>
+
+  <!-- Tela inicial -->
+  <div id="title">
+    <div class="title-box">
+      <h1>PIXEL<br />DA QUEBRADA</h1>
+      <p class="slogan">Cada muro conta uma história.</p>
+      <p class="label">ESCOLHA SEU PERSONAGEM</p>
+      <div class="chars">
+        <button class="char selected" data-sex="menino">
+          <div class="figbox"><img class="fig" src="/assets/sprites/mano_full.png" alt="Mano" draggable="false" /></div>
+          <span>MANO</span>
+        </button>
+        <button class="char" data-sex="menina">
+          <div class="figbox"><img class="fig" src="/assets/sprites/mina_full.png" alt="Mina" draggable="false" /></div>
+          <span>MINA</span>
+        </button>
+      </div>
+      <p class="label">SEU NOME</p>
+      <input id="name" maxlength="12" placeholder="digita aqui" autocomplete="off" />
+      <button id="start" class="btn big">INICIAR</button>
+      <p class="tiny">Setas / W A S D = andar<br />E = interagir</p>
+    </div>
+  </div>
+
+  <!-- Controles de toque -->
+  <div id="touch" class="hidden">
+    <div id="stick"><div id="knob"></div></div>
+    <button id="btnA">A</button>
+    <button id="btnB" class="hidden">B</button>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
