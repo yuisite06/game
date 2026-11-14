@@ -69,7 +69,7 @@ export class GameScene extends Phaser.Scene {
   preload() {
     ['asfalto','asfalto_faixa','asfalto_faixa_h','calcada','piso_rachado','grama','terra','bueiro','poca','escada']
       .forEach((n) => this.load.image('t_' + n, `assets/tiles/${n}.png`));
-    ['casa_azul','casa_amarela','casa_rosa','casa_verde','casa_tijolo','muro_verde','muro_rosa','muro_amarelo','quadra','ponto_aceso','ponto_apagado','varal','fio','caixa_dagua']
+    ['casa_azul','casa_amarela','casa_rosa','casa_verde','casa_tijolo','muro_verde','muro_rosa','muro_amarelo','quadra','ponto_aceso','ponto_apagado','varal','fio','caixa_dagua','skate_base','skate_frente','skate_rampa_e','skate_rampa_d','skate_caixote','skate_rampinha','skate_corrimao']
       .forEach((n) => this.load.image(n, `assets/props/${n}.png`));
     ['poste_apagado','moto_parada','bola'].forEach((n) => this.load.image(n, `assets/sprites/${n}.png`));
     ['menino','menina'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: 32, frameHeight: 44 }));
@@ -88,6 +88,7 @@ export class GameScene extends Phaser.Scene {
 
     this.buildGround(W, H);
     this.buildWorld();
+    this.buildSkate();
     this.buildNav();
     this.buildAnims();
     this.buildPlayer();
@@ -175,6 +176,58 @@ export class GameScene extends Phaser.Scene {
 map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).setDepth(f.y * T + 44));
   }
 
+  // ------------------------------------------------- PISTA DE SKATE (fim da rua)
+  // Peças geradas por tools/build_skatepark.py. Posições: map.skate.layout (relativas ao canto da pista).
+  buildSkate() {
+    const sk = map.skate; if (!sk) return;
+    const L = sk.layout, ox = sk.x * T, oy = sk.y * T, PW = L.PW, PH = L.PH, bh = L.bh, sw = L.sw;
+    this.add.image(ox, oy, 'skate_base').setOrigin(0).setDepth(-9);
+    this.add.image(ox, oy + PH - bh, 'skate_frente').setOrigin(0).setDepth(oy + PH);          // muro da frente cobre quem passa atrás
+    // fração da peça que é "sólida" (a parte de cima fica livre pra passar por trás)
+    const SOL = { rampa_e: 0.35, rampa_d: 0.35, caixote: 0.4, rampinha: 0.35, corrimao: 0.45 };
+    Object.entries(L.pecas).forEach(([k, p]) => {
+      this.add.image(ox + p.x, oy + p.y, 'skate_' + k).setOrigin(0).setDepth(oy + p.y + p.h);
+      const top = p.h * SOL[k];
+      this.block(ox + p.x + 2, oy + p.y + top, p.w - 4, p.h - top);
+    });
+    // muros: fundo, laterais e frente (com a entrada aberta no meio)
+    this.block(ox, oy, PW, bh + 4);
+    this.block(ox, oy, sw, PH); this.block(ox + PW - sw, oy, sw, PH);
+    this.block(ox, oy + PH - bh + 6, L.gap[0], bh);
+    this.block(ox + L.gap[1], oy + PH - bh + 6, PW - L.gap[1], bh);
+    this.buildSkateGang(ox, oy);
+  }
+  // rapaziada parada conversando (usa os sprites do Mano/Mina com cores diferentes)
+  buildSkateGang(ox, oy) {
+    const g = [
+      { x: 92,  y: 348, tex: 'menino', fr: 6, flip: false, tint: 0xffe3b8 },
+      { x: 142, y: 344, tex: 'menina', fr: 6, flip: true,  tint: 0xb8c8ff },
+      { x: 118, y: 330, tex: 'menino', fr: 0, flip: false, tint: 0xffb8b8 },
+      { x: 118, y: 368, tex: 'menina', fr: 3, flip: false, tint: 0xb8ffd0 },
+    ];
+    this.gang = g.map((n) => {
+      const x = ox + n.x, y = oy + n.y;
+      const s = this.add.sprite(x, y, n.tex, n.fr).setOrigin(0.5, 1).setDepth(y).setFlipX(n.flip).setTint(n.tint);
+      this.block(x - 6, y - 8, 12, 8);
+      return { s, x, y };
+    });
+    const FALAS = ['mano...', 'viu aquele corte?', 'KKKKK', 'bora andar?', 'ontem eu caí feio', 'quem vai primeiro?', 'sem chance', 'tá pesado hoje'];
+    this.time.addEvent({ delay: 2800, loop: true, callback: () => {
+      const v = this.cameras.main.worldView;
+      const vis = this.gang.filter((n) => Phaser.Geom.Rectangle.Contains(v, n.x, n.y));
+      if (state.started && vis.length) this.gangSay(Phaser.Math.RND.pick(vis), Phaser.Math.RND.pick(FALAS));
+    } });
+  }
+  gangSay(n, txt) {
+    const t = this.add.text(0, 0, txt, { fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#111111' }).setOrigin(0.5).setResolution(2);
+    const w = t.width + 10, h = t.height + 6;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 4).fillTriangle(-3, h / 2 - 1, 3, h / 2 - 1, 0, h / 2 + 4);
+    g.lineStyle(1, 0x000000, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
+    const b = this.add.container(n.x, n.y - 56, [g, t]).setDepth(20000);
+    this.tweens.add({ targets: b, y: b.y - 10, alpha: 0, delay: 1400, duration: 700, onComplete: () => b.destroy() });
+  }
+
   // ------------------------------------------- navegação do cachorro (ruas)
   buildNav() {
     const { W, H } = map;
@@ -184,6 +237,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     };
     map.houses.forEach((h) => mark(h.x, h.y, 3, 4));
     map.murais.forEach((m) => mark(m.x, m.y, 2, 2));
+    if (map.skate) mark(map.skate.x, map.skate.y, map.skate.w, map.skate.h);   // pista de skate: ninguém de fora entra
     map.postes.forEach(([x, y]) => mark(x, y, 1, 1));
     this.buses.forEach((b) => mark(Math.floor(b.px / T) - 1, Math.floor((b.pb - 16) / T), 3, 1));
   }

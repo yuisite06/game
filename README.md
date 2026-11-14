@@ -43,3 +43,10 @@ As imagens originais estão em `raw/`. `tools/build_assets.py` e `tools/build_sp
 ```bash
 PYTHONPATH=tools python3 tools/build_sprites.py
 ```
+
+## Pista de skate (fim da rua principal)
+Mapa estendido pra 74x36 (a rua segue reto até o fim). Pista de 20x13 tiles em x53,y17, entrada virada pra rua. As 2 casas do fim da rua (rosa e azul), o poste de luz e o poste de fios dali foram removidos. Rapaziada conversando no canto de baixo à esquerda.
+```bash
+python3 tools/build_skatepark.py   # recorta raw/Pista.png -> public/assets/props/skate_*.png
+python3 tools/add_skatepark.py     # encaixa no mapdata.json (roda 1x; NÃO rodar gen_map.py depois, ele apaga a pista)
+```

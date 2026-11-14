@@ -1,44 +1,44 @@
 {
- "W": 50,
+ "W": 83,
  "H": 36,
  "T": 32,
  "ground": [
-  "pppppopggpppppopppoppdddppppgggggpddddpppppppdddpp",
-  "ppppppppgggppppopppppppgggpgggdgdgdddppppopppgggpp",
-  "pppppppppggpppppppppppppggpppppggpcdccpcpcccpdpppo",
-  "pppppppppogpppoppppppppggggppppggccccccccccppppppp",
-  "ppppppppppppppobpppppppdpgpppppppcccccccccccoppppp",
-  "ppdppoppppppodpsspppdddddgpppppopcccccccccccggpppp",
-  "pdppppppppppdddpbppppppppppppppppccccccccccgpppppp",
-  "ddppppppppppdddpppppppppppppppppppcccccccccgpppppp",
-  "pdppppppppppdddpppppppppppppppppppccccccccccpppppp",
-  "ppppppppppdddddppppppppppppppppppcpcccppccgcpppppp",
-  "pppppppppdddddddppgggppppgggppppoppppgppdddddppppp",
-  "ppppppppppddddpdppggpppppggpppppppppggppdddddpppgp",
-  "ppppppppppggcccpccccggppppgpppppppppggppddppppppgg",
-  "ppppppppppggccccccccggppppgpppppppppggppddpppppppg",
-  "ppppppgggpgcpcddddccccpppppppppppppppgpboppppppppp",
-  "ppppppppggccccddddccccppppppppppppppppsspppppddddp",
-  "ppppppppppccccddddccccpppppppppppppppopppdddddddpp",
-  "ppppppppppcpccddddccccppppppppppppppppppppppppdppp",
-  "dpppppppppggccccpcccggpppppppppppppppppbppppppdppp",
-  "dpppppppppggccccccccggpppppppppppppppppppppppppdpp",
-  "pppppdpppppdddppppppppppppppppppppppppppppppppdddp",
-  "pppppgpppppgdgpppppppccccpccccccccppccppcpcdccodpc",
-  "oppppdggpppppppppppppc#b##o###o#############o#####",
-  "pppppgggpppppppppppppp##-#-#-b-#-#-#-#-#-#-#-#-#-#",
-  "pppppgggpppppppppppppc#|############o##b#b########",
-  "pppgggggppppppoppgpppc###cccpcpccpcccppcccpccdcccc",
-  "pppggppppppppggppggggg#o#cpppppppppppppppppppppppp",
-  "ppppopppgpppgggppggggg###coppppppppppppppppppppppp",
-  "ppppppppgpppgggppggggg#b#cpppppppppppppppppppppppp",
-  "ppppppppppppppgssgggggo##cpppppppppppppppppppppppp",
-  "ccccdccccccccccppccccp#|#cppdccdcccccccccccpcccdcc",
-  "##############o###########################b##b####",
-  "-#-#-b-#-#-#-#-#-#-#-#####-#-#-#-#-#-#-#-#-#-#-#-#",
-  "#########o####b#######o########b#####ob###########",
-  "gggggggggggggcccccccccccccgggggggggggggggggggggggg",
-  "gggggggggggggoppppdddddpppgggggggggggggggggggggggg"
+  "pppppopggpppppopppoppdddppppgggggpddddpppppppdddpppppgpppdpppppppppppppppppppgppppp",
+  "ppppppppgggppppopppppppgggpgggdgdgdddppppopppgggpppppppppgppppppppppppppppppppppppp",
+  "pppppppppggpppppppppppppggpppppggpcdccpcpcccpdpppopppppppgppppppppppppppppppppppppp",
+  "pppppppppogpppoppppppppggggppppggccccccccccpppppppdppppppggpppppppppppppppppppppppp",
+  "ppppppppppppppobpppppppdpgpppppppcccccccccccopppppdpppppppppppppppppppppppppppppppp",
+  "ppdppoppppppodpsspppdddddgpppppopcccccccccccggppppppggpppdpppppgpddpdpppppggpppppgp",
+  "pdppppppppppdddpbppppppppppppppppccccccccccgppppppppppppppppppppppppppppppppppgoppp",
+  "ddppppppppppdddpppppppppppppppppppcccccccccgpppppppppppppppppppppppppppppdppppppppp",
+  "pdppppppppppdddpppppppppppppppppppccccccccccpppppppppppppppppppppppppppppgppppppppp",
+  "ppppppppppdddddppppppppppppppppppcpcccppccgcppppppppppppppppppppppppppppppgpppppppp",
+  "pppppppppdddddddppgggppppgggppppoppppgppdddddppppcccccccccccccccccccccccccccccccppp",
+  "ppppppppppddddpdppggpppppggpppppppppggppdddddpppgc#############################cppp",
+  "ppppppppppggcccpccccggppppgpppppppppggppddppppppgc####-#-#-#b#-#-#-#o#-#-#-####cppp",
+  "ppppppppppggccccccccggppppgpppppppppggppddpppppppc#############################cppp",
+  "ppppppgggpgcpcddddccccpppppppppppppppgpboppppppppc#|#ccccccccccccccccccccccc#|#cppp",
+  "ppppppppggccccddddccccppppppppppppppppsspppppddddc###ccccccccccccccccccccccc###cppp",
+  "ppppppppppccccddddccccpppppppppppppppopppdddddddpc#|#ccccccccccccccccccccccc#|#cppp",
+  "ppppppppppcpccddddccccppppppppppppppppppppppppdppc###ccccccccccccccccccccccc###cppp",
+  "dpppppppppggccccpcccggpppppppppppppppppbppppppdppc#b#ccccccccccccccccccccccc#|#cppp",
+  "dpppppppppggccccccccggpppppppppppppppppppppppppdpc###ccccccccccccccccccccccc###cppp",
+  "pppppdpppppdddppppppppppppppppppppppppppppppppdddc#|#ccccccccccccccccccccccc#b#cppp",
+  "pppppgpppppgdgpppppppccccpccccccccppccppcpcdccodpc###ccccccccccccccccccccccc###cppp",
+  "oppppdggpppppppppppppc#b##o###o#############o######|#ccccccccccccccccccccccc#|#cppp",
+  "pppppgggpppppppppppppp##-#-#-b-#-#-#-#-#-#-#-#-#-####ccccccccccccccccccccccc###cppp",
+  "pppppgggpppppppppppppc#|############o##b#b#########|#ccccccccccccccccccccccc#|#cppp",
+  "pppgggggppppppoppgpppc###cccpcpccpcccppcccpccdcccccccccccccccccccccccccccccc###cppp",
+  "pppggppppppppggppggggg#o#cpppppppppppppppppccccccccccccccccccccccccccccccccc#|#cppp",
+  "ppppopppgpppgggppggggg###coppppppppppppppppccccccccccccccccccccccccccccccccc#o#cppp",
+  "ppppppppgpppgggppggggg#b#cpppppppppppppppppccccccccccccccccccccccccccccccccc#|#cppp",
+  "ppppppppppppppgssgggggo##cpppppppppppppppppccccccccccccccccccccccccccccccccc###cppp",
+  "ccccdccccccccccppccccp#|#cppdccdcccccccccccpcccdcccccccccccccccccccccccccccc#|#cccc",
+  "##############o###########################b##b#################################cccc",
+  "-#-#-b-#-#-#-#-#-#-#-#####-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#b#-#-####cccc",
+  "#########o####b#######o########b#####ob########################################cccc",
+  "gggggggggggggcccccccccccccggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+  "gggggggggggggoppppdddddpppggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
  ],
  "houses": [
   {
@@ -312,18 +312,6 @@
    "tank": false
   },
   {
-   "k": "casa_rosa",
-   "x": 43,
-   "y": 26,
-   "tank": false
-  },
-  {
-   "k": "casa_azul",
-   "x": 46,
-   "y": 26,
-   "tank": true
-  },
-  {
    "k": "casa_verde",
    "x": 46,
    "y": 2,
@@ -340,6 +328,138 @@
    "x": 47,
    "y": 7,
    "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 51,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 54,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 59,
+   "y": 1,
+   "tank": true
+  },
+  {
+   "k": "casa_amarela",
+   "x": 63,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 66,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_verde",
+   "x": 70,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 73,
+   "y": 1,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 77,
+   "y": 1,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 80,
+   "y": 1,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 51,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 55,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 58,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_amarela",
+   "x": 61,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 64,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_amarela",
+   "x": 67,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_tijolo",
+   "x": 70,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_rosa",
+   "x": 75,
+   "y": 6,
+   "tank": true
+  },
+  {
+   "k": "casa_azul",
+   "x": 80,
+   "y": 6,
+   "tank": false
+  },
+  {
+   "k": "casa_azul",
+   "x": 80,
+   "y": 14,
+   "tank": true
+  },
+  {
+   "k": "casa_verde",
+   "x": 80,
+   "y": 18,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 80,
+   "y": 22,
+   "tank": false
+  },
+  {
+   "k": "casa_rosa",
+   "x": 80,
+   "y": 26,
+   "tank": true
   }
  ],
  "murais": [
@@ -376,10 +496,6 @@
    30
   ],
   [
-   45,
-   30
-  ],
-  [
    28,
    25
   ],
@@ -394,6 +510,22 @@
   [
    21,
    22
+  ],
+  [
+   59,
+   30
+  ],
+  [
+   71,
+   30
+  ],
+  [
+   60,
+   10
+  ],
+  [
+   72,
+   10
   ]
  ],
  "ponto": {
@@ -472,10 +604,6 @@
    "y": 29.6
   },
   {
-   "x": 44,
-   "y": 29.6
-  },
-  {
    "x": 42,
    "y": 20.6
   },
@@ -484,5 +612,53 @@
    "y": 20.6
   }
  ],
- "bueiro_nota": ""
+ "bueiro_nota": "",
+ "skate": {
+  "x": 55,
+  "y": 17,
+  "w": 20,
+  "h": 13,
+  "layout": {
+   "PW": 640,
+   "PH": 416,
+   "bh": 25,
+   "sw": 14,
+   "gap": [
+    272,
+    368
+   ],
+   "pecas": {
+    "rampa_e": {
+     "x": 14,
+     "y": 62,
+     "w": 130,
+     "h": 168
+    },
+    "rampa_d": {
+     "x": 494,
+     "y": 62,
+     "w": 132,
+     "h": 168
+    },
+    "caixote": {
+     "x": 250,
+     "y": 53,
+     "w": 93,
+     "h": 33
+    },
+    "rampinha": {
+     "x": 410,
+     "y": 63,
+     "w": 57,
+     "h": 34
+    },
+    "corrimao": {
+     "x": 398,
+     "y": 312,
+     "w": 139,
+     "h": 27
+    }
+   }
+  }
+ }
 }
