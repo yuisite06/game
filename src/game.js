@@ -6,7 +6,7 @@ import { showDialog, setHint, updateHud, openMural, setRidingUI, setJuggleUI } f
 const T = map.T;
 const ROAD = new Set(['#', '-', '|', 'b', 'o']);          // moto só anda aqui
 const TILE_KEY = { '#':'asfalto', '-':'asfalto_faixa_h', '|':'asfalto_faixa', c:'calcada', p:'piso_rachado', g:'grama', d:'terra', b:'bueiro', o:'poca', s:'escada' };
-const WALK = 92, RIDE = 215, DOG_SPEED = 150, DOG_RETURN = 85;
+const WALK = 92, RIDE = 215, SKATE = 140, DOG_SPEED = 150, DOG_RETURN = 85;
 const JUG = { PER: 0.7, JANELA: 0.62, LIMITE: 1.12 };   // embaixadinha: tempo de cada toque (s) e janela de acerto
 // ---- MULTIDÃO: mexe aqui pra ajustar ----
 const CROWD_MAX = 600;                                          // máximo de gente
@@ -59,6 +59,8 @@ const TARDE = {
   glowAlpha: 0.45,       // brilho das luzes dos pontos de ônibus
 };
 
+const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 // moto: folha normal 52x48 / folha do grau 62x45 (mesmo centro e mesmo chão)
 const MOTO_W = 52, MOTO_H = 48, GRAU_W = 62, GRAU_H = 45;
 
@@ -75,6 +77,9 @@ export class GameScene extends Phaser.Scene {
     ['menino','menina'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: 32, frameHeight: 44 }));
     ['menino_moto','menina_moto'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: MOTO_W, frameHeight: MOTO_H }));
     ['menino_grau','menina_grau'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: GRAU_W, frameHeight: GRAU_H }));
+    ['menino_skate','menina_skate'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: 48, frameHeight: 55 }));
+    this.load.image('skate_chao', 'assets/props/skate_chao.png');
+    ['menino','menina'].forEach((sx) => ['ollie','kickflip','handplant'].forEach((t) => this.load.spritesheet(`${sx}_${t}`, `assets/sprites/${sx}_${t}.png`, { frameWidth: 50, frameHeight: 60 })));
     this.load.spritesheet('cachorro', 'assets/sprites/cachorro.png', { frameWidth: 32, frameHeight: 32 });
   }
 
@@ -101,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBusLight();
 
     this.physics.add.collider(this.player, this.solids);
+    if (this.rampSolids) this.physics.add.collider(this.player, this.rampSolids, null, () => !this.skating);
     this.dogs.forEach((d) => this.physics.add.collider(d.sprite, this.solids));
     this.physics.add.overlap(this.player, this.ball, () => this.kick());
 
@@ -143,6 +149,13 @@ export class GameScene extends Phaser.Scene {
     const z = this.add.zone(x + w / 2, y + h / 2, w, h);
     this.physics.world.enable(z, Phaser.Physics.Arcade.STATIC_BODY);
     this.solids.add(z); return z;
+  }
+  // parede da curva da rampa grande: só quem está de skate atravessa
+  blockRamp(x, y, w, h) {
+    if (!this.rampSolids) this.rampSolids = this.physics.add.staticGroup();
+    const z = this.add.zone(x + w / 2, y + h / 2, w, h);
+    this.physics.world.enable(z, Phaser.Physics.Arcade.STATIC_BODY);
+    this.rampSolids.add(z); return z;
   }
 
   buildWorld() {
@@ -187,6 +200,13 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     const SOL = { rampa_e: 0.35, rampa_d: 0.35, caixote: 0.4, rampinha: 0.35, corrimao: 0.45 };
     Object.entries(L.pecas).forEach(([k, p]) => {
       this.add.image(ox + p.x, oy + p.y, 'skate_' + k).setOrigin(0).setDepth(oy + p.y + p.h);
+      if (k === 'rampa_e' || k === 'rampa_d') {
+        // rampa grande: frente e faixa de cima sempre sólidas; a curva só deixa passar quem está de skate
+        this.block(ox + p.x + 2, oy + p.y + 160, p.w - 4, p.h - 160);
+        this.block(ox + p.x + 2, oy + p.y + 55, p.w - 4, 8);
+        this.blockRamp(ox + p.x + 2, oy + p.y + 63, p.w - 4, 97);
+        return;
+      }
       const top = p.h * SOL[k];
       this.block(ox + p.x + 2, oy + p.y + top, p.w - 4, p.h - top);
     });
@@ -196,6 +216,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     this.block(ox, oy + PH - bh + 6, L.gap[0], bh);
     this.block(ox + L.gap[1], oy + PH - bh + 6, PW - L.gap[1], bh);
     this.buildSkateGang(ox, oy);
+    this.skateItem = this.add.image(ox + 320, oy + 350, 'skate_chao').setOrigin(0.5, 1).setDepth(oy + 350);
   }
   // rapaziada parada conversando (usa os sprites do Mano/Mina com cores diferentes)
   buildSkateGang(ox, oy) {
@@ -280,6 +301,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     ['menino', 'menina'].forEach((t) => {
       a(`${t}-down`, t, [1, 0, 2, 0], 8); a(`${t}-up`, t, [4, 3, 5, 3], 8); a(`${t}-side`, t, [7, 6, 8, 6], 8);
       a(`${t}_moto-side`, `${t}_moto`, [0, 1, 2, 1], 12); a(`${t}_moto-down`, `${t}_moto`, [3, 4, 5, 4], 12); a(`${t}_moto-up`, `${t}_moto`, [6, 7, 8, 7], 12);
+      a(`${t}_skate-down`, `${t}_skate`, [1, 0, 2, 0], 6); a(`${t}_skate-up`, `${t}_skate`, [4, 3, 5, 3], 6); a(`${t}_skate-side`, `${t}_skate`, [7, 6, 8, 6], 6);
     });
     a('dog-down', 'cachorro', [0, 1, 2, 1], 11); a('dog-up', 'cachorro', [3, 4, 5, 4], 11); a('dog-side', 'cachorro', [6, 7, 8, 7], 11);
   }
@@ -288,23 +310,73 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   buildPlayer() {
     this.player = this.physics.add.sprite(map.start.x * T + T / 2, map.start.y * T + T - 4, 'menino', 0).setOrigin(0.5, 1);
     this.player.setCollideWorldBounds(true);
-    this.facing = 'down'; this.riding = false; this.sideDir = 'right'; this.wheelie = 0;
+    this.facing = 'down'; this.riding = false; this.skating = false; this.trick = null; this.prevKeys = new Set(); this.lift = 0; this.rampV = 0; this.carryX = 0; this.sideDir = 'right'; this.wheelie = 0;
     this.nameLabel = this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '8px', color: '#fff', stroke: '#000', strokeThickness: 3 })
       .setOrigin(0.5, 1).setResolution(2).setDepth(20000);
   }
   // corpo de colisão sempre centrado embaixo do sprite (serve pra qualquer tamanho de frame)
   setPlayerBody(riding) {
-    const b = this.player.body, [bw, bh] = riding ? [20, 10] : [12, 8];
-    b.setSize(bw, bh); b.setOffset((this.player.width - bw) / 2, this.player.height - bh);
+    const b = this.player.body, [bw, bh] = riding === 'skate' ? [14, 8] : riding ? [20, 10] : [12, 8], l = this.lift || 0;
+    b.setSize(bw, bh); b.setOffset((this.player.width - bw) / 2, this.player.height - bh + l);
+    this.player.setOrigin(0.5, 1 + l / this.player.height);   // l = altura na rampa (só visual, o corpo fica no chão)
+  }
+  setLift(l) {
+    l = Math.round(l);
+    if (l !== (this.lift || 0)) { this.lift = l; this.setPlayerBody(this.skating || this.trick ? 'skate' : this.riding); }
   }
   ensureMotoTex() {
     const key = `${state.sex}_moto`;
     if (this.player.texture.key !== key) { this.player.anims.stop(); this.player.setTexture(key, 0); this.setPlayerBody(true); }
   }
+  ensureSkateTex() {
+    const key = `${state.sex}_skate`;
+    if (this.player.texture.key !== key) { this.player.anims.stop(); this.player.setTexture(key, 0); this.setPlayerBody('skate'); }
+  }
+  // faixa da curva/plataforma da rampa grande (m = folga nas laterais, só pra profundidade)
+  rampAt(x, y, m = 0) {
+    const sk = map.skate; if (!sk) return null;
+    const L = sk.layout, ox = sk.x * T, oy = sk.y * T;
+    for (const k of ['rampa_e', 'rampa_d']) {
+      const r = L.pecas[k], e = k === 'rampa_e';
+      const x0 = ox + r.x + 2, x1 = ox + r.x + r.w - 2, y0 = oy + r.y + 63, y1 = oy + r.y + 160;
+      if (x < x0 - m || x > x1 + m || y < y0 || y > y1) continue;
+      const xd = e ? ox + r.x + 55 : ox + r.x + r.w - 55;
+      const u = Phaser.Math.Clamp(e ? (x1 - x) / (x1 - xd) : (x - x0) / (xd - x0), 0, 1);
+      const inside = x >= x0 && x <= x1;
+      return { u, dir: e ? 1 : -1, flip: !e, lift: inside ? 40 * u * u : 0, yMax: oy + r.y + 160 - 56 * u * u, depth: oy + r.y + r.h + 1, deck: inside && u >= 1 };
+    }
+    return null;
+  }
+  // plataforma de cima da rampa grande: { flip, ... } ou null
+  deckAt(x, y) { const r = this.rampAt(x, y); return r && r.deck ? r : null; }
+  startTrick(name, flip) {
+    const DUR = { ollie: 0.55, kickflip: 0.7, handplant: 1.2 };
+    this.trick = { name, t: 0, dur: DUR[name], lock: name === 'handplant', flip: flip === undefined ? this.sideDir === 'left' : flip };
+    this.player.anims.stop(); this.player.setTexture(`${state.sex}_${name}`, 0); this.setPlayerBody('skate');
+    this.player.setFlipX(this.trick.flip);
+  }
+  updateTrick(dt) {
+    const tr = this.trick, p = this.player;
+    tr.t += dt;
+    if (tr.t >= tr.dur) { this.trick = null; this.ensureSkateTex(); this.setIdle(); return; }
+    p.setFlipX(tr.flip); p.setFrame(Math.min(5, Math.floor(tr.t / tr.dur * 6)));
+  }
+  takeOrDropSkate() {
+    if (this.trick || this.rampAt(this.player.x, this.player.y)) return;
+    const p = this.player;
+    if (!this.skating) {
+      this.skating = true; this.skateItem.setVisible(false);
+      this.ensureSkateTex(); this.setIdle();
+    } else {
+      this.skating = false;
+      this.skateItem.setPosition(p.x, p.y).setDepth(p.y).setVisible(true);
+      p.anims.stop(); p.setTexture(state.sex); this.setPlayerBody(false); this.setIdle();
+    }
+  }
   setIdle() {
     const kind = this.facing === 'left' || this.facing === 'right' ? 'side' : this.facing;
     // a folha a pé é (frente, costas, lado); a de moto é (lado, frente, costas)
-    if (this.riding) this.ensureMotoTex();
+    if (this.riding) this.ensureMotoTex(); else if (this.skating) this.ensureSkateTex();
     const row = this.riding ? { side: 0, down: 1, up: 2 }[kind] : { down: 0, up: 1, side: 2 }[kind];
     this.player.anims.stop(); this.player.setFrame(row * 3);
     this.player.setFlipX(this.facing === 'left');
@@ -415,7 +487,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     const p = this.player, b = this.ball;
     const pedido = state.juggle; state.juggle = false;
     if (!this.juggling) {
-      const perto = !this.riding && !state.paused && Phaser.Math.Distance.Between(p.x, p.y - 6, b.x, b.y) < 44;
+      const perto = !this.riding && !this.skating && !state.paused && Phaser.Math.Distance.Between(p.x, p.y - 6, b.x, b.y) < 44;
       if (perto !== this.nearBall) { this.nearBall = perto; setJuggleUI(perto); }
       if (pedido && perto && !this.goalLock) this.startJuggle();
       return;
@@ -773,8 +845,8 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   // ------------------------------------------------------------------ update
   update(_, delta) {
     const dt = delta / 1000, p = this.player, mv = getMove();
-    if (this.juggling && (this.riding || state.paused)) this.stopJuggle(false);
-    const speed = this.riding ? RIDE : WALK;
+    if (this.juggling && (this.riding || this.skating || state.paused)) this.stopJuggle(false);
+    const speed = this.riding ? RIDE : this.skating ? SKATE : WALK;
     let vx = mv.x * speed, vy = mv.y * speed;
 
     // GRAU: segura ESPAÇO (ou botão A no celular) de moto
@@ -787,6 +859,22 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       if (vx && !okMove(p.x + vx * dt, p.y)) vx = 0;
       if (vy && !okMove(p.x, p.y + vy * dt)) vy = 0;
     }
+    // RAMPA GRANDE: sobe devagar, solta e desce sozinho (acelerando), sai com embalo
+    const ri = this.skating && !this.trick ? this.rampAt(p.x, p.y) : null;
+    if (ri) {
+      if (p.y > ri.yMax) p.y = ri.yMax;       // a curva afunila: não deixa descer pra dentro da frente
+      if (mv.x !== 0 && Math.sign(mv.x) === -ri.dir) { this.rampV = 0; vx = -ri.dir * SKATE * (1 - 0.65 * ri.u); }   // empurrando pro topo
+      else {
+        if (ri.deck && mv.x === ri.dir) this.rampV = Math.max(this.rampV, 60);                                          // drop-in
+        const g = ri.deck ? (mv.x === ri.dir ? 0.4 : 0) : ri.u + 0.1;
+        this.rampV = g > 0 ? Math.min(this.rampV + 380 * g * dt, 260) : 0;
+        vx = ri.dir * this.rampV; this.rampDir = ri.dir;
+      }
+    } else {
+      if (this.rampV > 0) { this.carryX = this.rampDir * this.rampV; this.rampV = 0; }
+      if (this.carryX) { vx += this.carryX; this.carryX *= Math.max(0, 1 - 2.2 * dt); if (Math.abs(this.carryX) < 8) this.carryX = 0; }
+    }
+    if (this.trick && this.trick.lock) { vx = 0; vy = 0; }
     p.setVelocity(vx, vy);
 
     if (mv.x || mv.y) this.facing = mv.x ? (mv.x > 0 ? 'right' : 'left') : (mv.y > 0 ? 'down' : 'up');
@@ -794,7 +882,9 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
 
     const vertical = this.facing === 'up' || this.facing === 'down';
 
-    if (this.riding && this.wheelie > 0.02) {
+    if (this.trick) {
+      // manobra: o frame é desenhado em updateTrick
+    } else if (this.riding && this.wheelie > 0.02) {
       if (vertical) {
         // grau pra cima/baixo: usa a moto de costas/frente e estica (fake de top-down)
         this.ensureMotoTex();
@@ -812,19 +902,32 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       }
     } else {
       p.setScale(1);
-      if (this.riding) this.ensureMotoTex();
+      if (this.riding) this.ensureMotoTex(); else if (this.skating) this.ensureSkateTex();
       if (mv.x || mv.y) {
         const kind = mv.x ? 'side' : this.facing;
         p.setFlipX(this.facing === 'left');
-        if (vx || vy) p.anims.play(`${this.riding ? state.sex + '_moto' : state.sex}-${kind}`, true); else this.setIdle();
+        if (vx || vy) p.anims.play(`${this.riding ? state.sex + '_moto' : this.skating ? state.sex + '_skate' : state.sex}-${kind}`, true); else this.setIdle();
       } else this.setIdle();
     }
+
+    // manobras de skate: B ollie · N kickflip · M handplant (só em cima da rampa grande)
+    const tap = (k) => state.keys.has(k) && !this.prevKeys.has(k);
+    if (this.skating && !this.trick && !state.paused) {
+      const deck = this.deckAt(p.x, p.y);
+      if (tap('b')) this.startTrick('ollie');
+      else if (tap('n')) this.startTrick('kickflip');
+      else if (tap('m') && deck) this.startTrick('handplant', deck.flip);
+    }
+    this.prevKeys = new Set(state.keys);
+    if (this.trick) this.updateTrick(dt);
 
     // dica de interação + ação (E / A / B)
     let hint = null, target = null;
     if (this.riding) hint = 'E: descer • ESPAÇO: grau';
     else {
-      if (Phaser.Math.Distance.Between(p.x, p.y, this.moto.x, this.moto.y) < 38) { hint = 'E: montar na moto'; target = 'moto'; }
+      if (this.skating) { hint = TOUCH ? 'E: largar o skate' : this.deckAt(p.x, p.y) ? 'M: handplant • B: ollie • N: kickflip • E: largar' : 'B: ollie • N: kickflip • E: largar'; target = 'skate'; }
+      else if (this.skateItem && Phaser.Math.Distance.Between(p.x, p.y, this.skateItem.x, this.skateItem.y - 4) < 34) { hint = 'E: pegar o skate'; target = 'skate'; }
+      else if (Phaser.Math.Distance.Between(p.x, p.y, this.moto.x, this.moto.y) < 38) { hint = 'E: montar na moto'; target = 'moto'; }
       const m = this.murais.find((m) => Phaser.Geom.Rectangle.Contains(m.rect, p.x, p.y - 4));
       if (m) { hint = 'E: ver o mural'; target = m; }
     }
@@ -834,6 +937,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     setHint(state.paused ? null : hint);
     if (consumeAction() && !state.paused && !this.juggling) {
       if (this.riding) this.mountOrDismount();
+      else if (target === 'skate') this.takeOrDropSkate();
       else if (target === 'moto') this.mountOrDismount();
       else if (target) this.openMural(target);
       else if (this.crowd.state === 'watching' && state.actionSrc === 'e') this.crowdLeave();
@@ -847,7 +951,9 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
 
     this.dogs.forEach((d) => this.updateDog(d, dt));
     this.crowdUpdate(dt);
-    p.setDepth(p.y); this.nameLabel.setPosition(p.x, p.y - (this.riding ? 50 + 12 * this.wheelie : 46)).setVisible(true);
+    const rp = this.skating || this.trick ? this.rampAt(p.x, p.y, 24) : null;
+    this.setLift(this.skating && rp ? rp.lift : 0);
+    p.setDepth(rp ? rp.depth : p.y); this.nameLabel.setPosition(p.x, p.y - (this.lift || 0) - (this.riding ? 50 + 12 * this.wheelie : this.skating ? 54 : 46)).setVisible(true);
     this.moto.setDepth(this.moto.y);
   }
 

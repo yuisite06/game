@@ -40,7 +40,10 @@
   "gggggggggggggcccccccccccccggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
   "gggggggggggggoppppdddddpppggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
  ],
- "houses": [
+"houses": [
+  {"k": "casa_azul", "x": 44, "y": 26, "tank": false},
+  {"k": "casa_amarela", "x": 47, "y": 26, "tank": false},
+  {"k": "casa_rosa", "x": 51, "y": 26, "tank": false},
   {
    "k": "casa_amarela",
    "x": 0,
