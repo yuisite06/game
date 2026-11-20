@@ -12,6 +12,9 @@ const JUG = { PER: 0.7, JANELA: 0.62, LIMITE: 1.12 };   // embaixadinha: tempo d
 const CROWD_MAX = 600;                                          // máximo de gente
 const CROWD_FRASES = ['UAU!', 'JOGADOR NÚMERO 1!', 'PRÓXIMO NEYMAR!'];
 const CROWD_TONS = [0x050507, 0x15151b, 0x24242c, 0x33333d];    // preto -> cinza escuro (cor chapada)
+// ---- EQUIPE DA TV: mexe aqui pra ajustar ----
+const CAM_FRASE = 'ESSA CENA TEM QUE IR PRA TV!';
+const HELI = { W: 103, H: 86, ALT: 62, VOLTA_RX: 54, VOLTA_RY: 30, ENTRA: 2.2, VOLTA: 2.6, POUSA: 0.9, BOBE: 4.5, SAI: 2.4, PX: 100, PY: -25 };  // ALT = altura da hélice sobre a sombra (px)
 
 // ---- limpa postes: nada colado em ponto de ônibus e luz nunca em cima de fio ----
 (function limpaPostes() {
@@ -51,12 +54,9 @@ const CROWD_TONS = [0x050507, 0x15151b, 0x24242c, 0x33333d];    // preto -> cinz
   }).filter(Boolean);
 })();
 
-// ---- FIM DE TARDE: mexe aqui pra ajustar o clima ----
-const TARDE = {
-  tint: 0xffc08f,        // cor que "multiplica" a imagem (mais claro = menos efeito)
-  vigInner: 'rgba(255,150,70,0)',     // centro da vinheta
-  vigOuter: 'rgba(70,20,80,0.5)',     // bordas da vinheta (roxo escuro)
-  glowAlpha: 0.45,       // brilho das luzes dos pontos de ônibus
+// ---- DIA: brilho dos pontos de ônibus ----
+const DIA = {
+  glowAlpha: 0,          // brilho das luzes dos pontos (0 = sem brilho, só troca o sprite)
 };
 
 const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -71,7 +71,7 @@ export class GameScene extends Phaser.Scene {
   preload() {
     ['asfalto','asfalto_faixa','asfalto_faixa_h','calcada','piso_rachado','grama','terra','bueiro','poca','escada']
       .forEach((n) => this.load.image('t_' + n, `assets/tiles/${n}.png`));
-    ['casa_azul','casa_amarela','casa_rosa','casa_verde','casa_tijolo','muro_verde','muro_rosa','muro_amarelo','quadra','ponto_aceso','ponto_apagado','varal','fio','caixa_dagua','skate_base','skate_frente','skate_rampa_e','skate_rampa_d','skate_caixote','skate_rampinha','skate_corrimao']
+    ['casa_azul','casa_amarela','casa_rosa','casa_verde','casa_tijolo','muro_verde','muro_rosa','muro_amarelo','quadra','bar_ze','padaria','ponto_aceso','ponto_apagado','varal','fio','caixa_dagua','skate_base','skate_frente','skate_rampa_e','skate_rampa_d','skate_caixote','skate_rampinha','skate_corrimao']
       .forEach((n) => this.load.image(n, `assets/props/${n}.png`));
     ['poste_apagado','moto_parada','bola'].forEach((n) => this.load.image(n, `assets/sprites/${n}.png`));
     ['menino','menina'].forEach((n) => this.load.spritesheet(n, `assets/sprites/${n}.png`, { frameWidth: 32, frameHeight: 44 }));
@@ -81,6 +81,10 @@ export class GameScene extends Phaser.Scene {
     this.load.image('skate_chao', 'assets/props/skate_chao.png');
     ['menino','menina'].forEach((sx) => ['ollie','kickflip','handplant'].forEach((t) => this.load.spritesheet(`${sx}_${t}`, `assets/sprites/${sx}_${t}.png`, { frameWidth: 50, frameHeight: 60 })));
     this.load.spritesheet('cachorro', 'assets/sprites/cachorro.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('cachorro_sentado', 'assets/sprites/cachorro_sentado.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('cameraman', 'assets/sprites/cameraman.png', { frameWidth: 40, frameHeight: 46 });
+    this.load.spritesheet('helicoptero', 'assets/sprites/helicoptero.png', { frameWidth: HELI.W, frameHeight: HELI.H });
+    this.load.image('heli_sombra', 'assets/sprites/helicoptero_sombra.png');
   }
 
   // ----------------------------------------------------------------- create
@@ -102,7 +106,8 @@ export class GameScene extends Phaser.Scene {
     this.buildGoals();
     this.buildDog();
     this.buildCrowd();
-    this.buildSunset();
+    this.buildHeli();
+    this.buildBrilho();
     this.buildBusLight();
 
     this.physics.add.collider(this.player, this.solids);
@@ -303,6 +308,8 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       a(`${t}_moto-side`, `${t}_moto`, [0, 1, 2, 1], 12); a(`${t}_moto-down`, `${t}_moto`, [3, 4, 5, 4], 12); a(`${t}_moto-up`, `${t}_moto`, [6, 7, 8, 7], 12);
       a(`${t}_skate-down`, `${t}_skate`, [1, 0, 2, 0], 6); a(`${t}_skate-up`, `${t}_skate`, [4, 3, 5, 3], 6); a(`${t}_skate-side`, `${t}_skate`, [7, 6, 8, 6], 6);
     });
+    a('cameraman-down', 'cameraman', [1, 0, 2, 0], 8); a('cameraman-up', 'cameraman', [4, 3, 5, 3], 8); a('cameraman-side', 'cameraman', [7, 6, 8, 6], 8);
+    this.anims.create({ key: 'heli-voa', frames: [0, 1, 2, 3].map((f) => ({ key: 'helicoptero', frame: f })), frameRate: 16, repeat: -1 });
     a('dog-down', 'cachorro', [0, 1, 2, 1], 11); a('dog-up', 'cachorro', [3, 4, 5, 4], 11); a('dog-side', 'cachorro', [6, 7, 8, 7], 11);
   }
 
@@ -403,7 +410,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     // desceu: quem estava atrás vai embora. Montou: quem estiver perto vem atrás de novo
     this.dogs.forEach((d) => {
       const dist = Phaser.Math.Distance.Between(d.sprite.x, d.sprite.y, this.player.x, this.player.y);
-      if (this.riding && dist < 170) { d.state = 'chase'; d.t = 0; d.path = null; d.repath = 0; }
+      if (d.chase && this.riding && dist < 170) { d.state = 'chase'; d.t = 0; d.path = null; d.repath = 0; }
       else if (!this.riding && d.state === 'chase') { d.state = 'return'; d.t = 0; d.path = null; d.repath = 0; }
     });
   }
@@ -535,19 +542,21 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     // 1º cachorro: posição do mapa. Os outros: mexe aqui pra mudar lugar/cor/velocidade
     const b = { x: map.dog.x, y: map.dog.y };
     const lista = [
-      { x: b.x, y: b.y, tint: null, vel: 1, cool: 0 },
-      { x: b.x + 1, y: b.y, tint: 0xd9b38c, vel: 0.9, cool: 0.8 },
+      { x: b.x, y: b.y, tint: 0x8f6a52, vel: 1, cool: 0, sit: 0, chase: true },        // marrom chocolate
+      { x: b.x + 1, y: b.y, tint: 0xd9b38c, vel: 0.9, cool: 0.8, sit: 1, chase: true },   // caramelo
+      { x: b.x + 2, y: b.y, tint: null, vel: 1, cool: 0, sit: 2, chase: false },          // preto (só fica sentado)
+      { x: b.x + 3, y: b.y, tint: null, vel: 1, cool: 0, sit: 3, chase: false },          // preto e branco (só fica sentado)
     ];
     this.dogs = lista.map((c) => {
       const home = new Phaser.Math.Vector2(c.x * T + T / 2, c.y * T + T - 2);
       const sprite = this.physics.add.sprite(home.x, home.y, 'cachorro', 6).setOrigin(0.5, 1);
       sprite.body.setSize(14, 8).setOffset(9, 24);
-      if (c.tint) sprite.setTint(c.tint);
-      return { sprite, home, vel: c.vel, state: 'home', t: 0, cool: c.cool, lastBark: 0, path: null, repath: 0 };
+      return { sprite, home, tint: c.tint, sit: c.sit, chase: c.chase, vel: c.vel, state: 'home', t: 0, cool: c.cool, lastBark: 0, path: null, repath: 0 };
     });
   }
   dogFace(d, vx, vy) {
     const s = d.sprite;
+    if (d.tint) s.setTint(d.tint); else s.clearTint();
     if (Math.abs(vx) > Math.abs(vy)) { s.setFlipX(vx > 0); s.anims.play('dog-side', true); }
     else { s.setFlipX(false); s.anims.play(vy > 0 ? 'dog-down' : 'dog-up', true); }
   }
@@ -579,8 +588,8 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     const dist = Phaser.Math.Distance.Between(s.x, s.y, p.x, p.y);
     d.cool -= dt;
     if (d.state === 'home') {
-      s.setVelocity(0); s.anims.stop(); s.setFlipX(false); s.setFrame(6);
-      if (this.riding && d.cool <= 0 && dist < 170 && Math.hypot(p.body.velocity.x, p.body.velocity.y) > 120) {
+      s.setVelocity(0); s.anims.stop(); s.clearTint(); s.setFlipX(false); s.setTexture('cachorro_sentado', d.sit);
+      if (d.chase && this.riding && d.cool <= 0 && dist < 170 && Math.hypot(p.body.velocity.x, p.body.velocity.y) > 120) {
         d.state = 'chase'; d.t = 0; d.path = null; d.repath = 0;
       }
     } else if (d.state === 'chase') {
@@ -624,12 +633,14 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       if (cel[k] === undefined) cel[k] = Phaser.Math.RND.pick([0, 0, 1, 1, 2, 3]);
       return Phaser.Math.Clamp(cel[k] + Phaser.Math.RND.pick([-1, 0, 0, 0, 0, 0, 0, 1]), 0, 3);
     };
+    const camX = Math.round(qx + qw / 2), camY = qy + qh + 26;                  // câmera man: embaixo da quadra, no meio
     const lugares = [];
     for (let row = 0, fy = outer.y; fy <= outer.bottom + 50; row++, fy += 8) {
       for (let fx = outer.x + (row % 2 ? 6 : 0); fx <= outer.right; fx += 12) {
         const x = Math.round(fx + Phaser.Math.Between(-2, 2)), y = Math.round(fy + Phaser.Math.Between(-1, 1));
         if (x < 14 || x > map.W * T - 14 || y < 46 || y > map.H * T - 2) continue;
         if (Phaser.Geom.Intersects.RectangleToRectangle(new Phaser.Geom.Rectangle(x - 12, y - 44, 24, 44), cour)) continue;   // corpo inteiro fora da quadra
+        if (Math.abs(x - camX) < 34 && y > camY - 8 && y < camY + 56) continue;                                                // ninguém na frente do câmera man
         if (!Phaser.Geom.Rectangle.Contains(outer, x, y - 16)) continue;
         const ch = (map.ground[Math.floor((y - 4) / T)] || '')[Math.floor(x / T)];
         if (!ch || !'cpdgo'.includes(ch) || bloq(x, y - 4) || bloq(x, y - 40)) continue;
@@ -637,9 +648,13 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       }
     }
     lugares.sort((a, b) => a.d - b.d);
+    const camMan = {                                                             // câmera man da TV: chega andando, para olhando pra quadra e grava
+      cam: true, sx: camX, sy: camY, x: camX, y: camY, s: null, state: 'gone', route: [], ri: 0, wait: 0, t: 0, speed: 0, jump: 0, vx: 0, vy: 0,
+      tex: 'cameraman', tom: 0, fr: 3, flip: false, sc: 1, jx: 0, jy: 0, ph: 0, bobA: 0, bobF: 5,
+    };
     this.crowd = {
       state: 'hidden', lastSay: 0,                                               // hidden -> entering -> watching -> leaving -> hidden
-      members: lugares.slice(0, CROWD_MAX).map((l) => {
+      members: [camMan, ...lugares.slice(0, CROWD_MAX).map((l) => {
         // cada um olha pra quadra: de frente (norte), de costas (sul) ou de lado (leste/oeste)
         const ox = l.x < qx ? qx - l.x : l.x > qx + qw ? l.x - (qx + qw) : 0;
         const oy = l.y < qy ? qy - l.y : l.y > qy + qh ? l.y - (qy + qh) : 0;
@@ -652,7 +667,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
           jx: Phaser.Math.Between(-5, 5), jy: Phaser.Math.Between(-2, 2),
           ph: Math.random() * 6.28, bobA: Phaser.Math.RND.pick([0, 0, 0.8, 1.2]), bobF: Phaser.Math.Between(5, 9),
         };
-      }),
+      })],
     };
   }
   crowdView(margem) {
@@ -705,7 +720,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   // eles entram pela rua, vindo de fora da tela, e ocupam os lugares
   crowdShow() {
     const c = this.crowd, vb = this.crowdView(56);
-    c.state = 'entering';
+    c.state = 'entering'; this.heliStart();
     c.members.forEach((m) => {
       const r = this.crowdRoute(Math.floor(m.sx / T), Math.floor((m.sy - 4) / T));
       m.route = r ? r.reverse() : [];
@@ -718,7 +733,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   }
   // E: manda a galera embora. Saem pela rua e somem.
   crowdLeave() {
-    const c = this.crowd; c.state = 'leaving';
+    const c = this.crowd; c.state = 'leaving'; this.heliLeave();
     c.members.forEach((m) => {
       if (m.state !== 'stand') return;
       m.route = this.crowdRoute(Math.floor(m.sx / T), Math.floor((m.sy - 4) / T)) || [];
@@ -727,7 +742,8 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   }
   // sprite do menino/menina pintado de cor chapada (só a silhueta, com pés)
   crowdSpawn(m) {
-    m.s = this.add.sprite(m.x, m.y, m.tex, m.fr).setOrigin(0.5, 1).setDepth(m.y).setScale(m.sc).setFlipX(m.flip).setTintFill(CROWD_TONS[m.tom]);
+    m.s = this.add.sprite(m.x, m.y, m.tex, m.fr).setOrigin(0.5, 1).setDepth(m.y).setScale(m.sc).setFlipX(m.flip);
+    if (!m.cam) m.s.setTintFill(CROWD_TONS[m.tom]);                              // a galera é silhueta; o câmera man tem cor
     m.state = 'enter';
   }
   crowdFace(m) { m.s.anims.stop(); m.s.setFrame(m.fr).setFlipX(m.flip); }   // parado: olha pra quadra
@@ -747,18 +763,18 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     if (!first && now - c.lastSay < 1200) return;
     c.lastSay = now;
     const vb = this.crowdView(0);
-    const vis = Phaser.Utils.Array.Shuffle(c.members.filter((m) => m.state === 'stand' && Phaser.Geom.Rectangle.Contains(vb, m.x, m.y)));
+    const vis = Phaser.Utils.Array.Shuffle(c.members.filter((m) => !m.cam && m.state === 'stand' && Phaser.Geom.Rectangle.Contains(vb, m.x, m.y)));
     const frases = Phaser.Utils.Array.Shuffle([...CROWD_FRASES]);
     vis.slice(0, 4).forEach((m, i) => this.time.delayedCall(i * 160, () => { if (m.s) this.crowdSay(m, frases[i % frases.length]); }));
   }
-  crowdSay(m, txt) {
+  crowdSay(m, txt, hold = 500) {
     const t = this.add.text(0, 0, txt, { fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', color: '#111111' }).setOrigin(0.5).setResolution(2);
     const w = t.width + 10, h = t.height + 6;
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 4).fillTriangle(-3, h / 2 - 1, 3, h / 2 - 1, 0, h / 2 + 4);
     g.lineStyle(1, 0x000000, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 4);
     const b = this.add.container(m.x, m.y - 56, [g, t]).setDepth(20000);
-    this.tweens.add({ targets: b, y: b.y - 12, alpha: 0, delay: 500, duration: 900, onComplete: () => b.destroy() });
+    this.tweens.add({ targets: b, y: b.y - 12, alpha: 0, delay: hold, duration: 900, onComplete: () => b.destroy() });
     m.jump = 0.25;                                                               // pulinho
   }
   crowdUpdate(dt) {
@@ -780,7 +796,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
       else if (m.state === 'enter') {
         const w = m.ri < m.route.length ? this.wp(m.route[m.ri]) : null;
         if (this.crowdMove(m, w ? w.x + m.jx : m.sx, w ? w.y + m.jy : m.sy, dt)) {
-          if (w) m.ri++; else { m.state = 'stand'; m.s.setDepth(m.sy); this.crowdFace(m); }
+          if (w) m.ri++; else { m.state = 'stand'; m.s.setDepth(m.sy); this.crowdFace(m); if (m.cam) this.crowdSay(m, CAM_FRASE, 2200); }
         }
       } else if (m.state === 'leave') {
         m.t += dt;
@@ -804,18 +820,62 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
     if (c.state === 'entering' && vivos > 0 && parados === vivos) { c.state = 'watching'; this.crowdShout(true); }
     if (c.state === 'leaving' && vivos === 0) c.state = 'hidden';
   }
-  buildSunset() {
-    const cw = this.cameras.main.width, ch = this.cameras.main.height;
-    // 1) multiplica tudo por uma cor quente
-    this.add.rectangle(0, 0, cw, ch, TARDE.tint).setOrigin(0).setScrollFactor(0).setDepth(30000)
-      .setBlendMode(Phaser.BlendModes.MULTIPLY);
-    // 2) vinheta alaranjada -> roxa nas bordas
-    const vt = this.textures.createCanvas('vinheta', cw, ch), vc = vt.getContext();
-    const gr = vc.createRadialGradient(cw / 2, ch / 2, ch * 0.3, cw / 2, ch / 2, cw * 0.62);
-    gr.addColorStop(0, TARDE.vigInner); gr.addColorStop(1, TARDE.vigOuter);
-    vc.fillStyle = gr; vc.fillRect(0, 0, cw, ch); vt.refresh();
-    this.add.image(0, 0, 'vinheta').setOrigin(0).setScrollFactor(0).setDepth(30001);
-    // 3) textura de brilho pras luzes
+  // ------------------------------------------------------- helicóptero da TV
+  // entra voando, dá uma voltinha sobre a quadra, paira subindo/descendo devagar e para. Quando a galera sai, ele vai embora.
+  buildHeli() { this.heli = { st: 'off', t: 0, gx: 0, gy: 0, fx: 0, fy: 0, spr: null, sh: null }; }
+  heliStart() {
+    const h = this.heli, q = map.quadra;
+    if (h.st !== 'off' && h.st !== 'sai') return;
+    if (h.st === 'off') {
+      const v = this.cameras.main.worldView;
+      h.gx = v.right + 100; h.gy = (q.y + q.h / 2) * T - 120;
+      h.spr = this.add.sprite(h.gx, h.gy - HELI.ALT, 'helicoptero', 0).setOrigin(0.5, 0.75).setDepth(19000);
+      h.sh = this.add.image(h.gx, h.gy, 'heli_sombra').setAlpha(0.4).setDepth(-7);
+      h.spr.anims.play('heli-voa');
+    }
+    h.fx = h.gx; h.fy = h.gy; h.t = 0; h.st = 'entra';
+  }
+  heliLeave() {
+    const h = this.heli;
+    if (h.st === 'off' || h.st === 'sai') return;
+    h.fx = h.gx; h.fy = h.gy; h.t = 0; h.st = 'sai';
+  }
+  heliUpdate(dt) {
+    const h = this.heli;
+    if (h.st === 'off') return;
+    dt = Math.min(dt, 0.05); h.t += dt;
+    const q = map.quadra, cx = (q.x + q.w / 2) * T, cy = (q.y + q.h / 2) * T;
+    const sm = (u) => u * u * (3 - 2 * u), lerp = (a, b, u) => a + (b - a) * u;
+    const P0 = { x: cx + HELI.VOLTA_RX, y: cy }, R = { x: cx + HELI.PX, y: cy + HELI.PY };   // R = onde ele para (canto superior direito)
+    let alt = HELI.ALT;
+    if (h.st === 'entra') {
+      const u = Math.min(h.t / HELI.ENTRA, 1), e = 1 - (1 - u) * (1 - u);
+      h.gx = lerp(h.fx, P0.x, e); h.gy = lerp(h.fy, P0.y, e);
+      if (u >= 1) { h.st = 'volta'; h.t = 0; }
+    } else if (h.st === 'volta') {
+      const u = Math.min(h.t / HELI.VOLTA, 1), th = Math.PI * 2 * sm(u);
+      h.gx = cx + HELI.VOLTA_RX * Math.cos(th); h.gy = cy + HELI.VOLTA_RY * Math.sin(th);
+      if (u >= 1) { h.st = 'pousa'; h.t = 0; }
+    } else if (h.st === 'pousa') {
+      const u = sm(Math.min(h.t / HELI.POUSA, 1));
+      h.gx = lerp(P0.x, R.x, u); h.gy = lerp(P0.y, R.y, u);
+      if (u >= 1) { h.st = 'bobe'; h.t = 0; }
+    } else if (h.st === 'bobe') {
+      const u = Math.min(h.t / HELI.BOBE, 1);
+      alt += 7 * (1 - u) * Math.sin(h.t * 3.4);                                  // sobe e desce cada vez menos
+      h.gx = R.x; h.gy = R.y;
+      if (u >= 1) h.st = 'para';
+    } else if (h.st === 'para') { h.gx = R.x; h.gy = R.y; }
+    else if (h.st === 'sai') {
+      const u = Math.min(h.t / HELI.SAI, 1), e = u * u, v = this.cameras.main.worldView;
+      h.gx = lerp(h.fx, v.x - 140, e); h.gy = lerp(h.fy, h.fy - 70, e);
+      if (u >= 1) { h.spr.destroy(); h.sh.destroy(); h.spr = h.sh = null; h.st = 'off'; return; }
+    }
+    h.spr.setPosition(Math.round(h.gx), Math.round(h.gy - alt));
+    h.sh.setPosition(Math.round(h.gx), Math.round(h.gy)).setScale(1 - (alt - HELI.ALT) * 0.01);
+  }
+
+  buildBrilho() {
     const gt = this.textures.createCanvas('brilho', 64, 64), gc = gt.getContext();
     const g2 = gc.createRadialGradient(32, 32, 0, 32, 32, 32);
     g2.addColorStop(0, 'rgba(255,225,150,1)'); g2.addColorStop(1, 'rgba(255,160,60,0)');
@@ -826,7 +886,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
   buildBusLight() {
     this.buses.forEach((b) => {
       b.glow = this.add.image(b.px, b.pb - 30, 'brilho').setScale(1.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(30002).setAlpha(0);
-      const set = (on) => { b.img.setTexture(on ? 'ponto_aceso' : 'ponto_apagado'); b.glow.setAlpha(on ? TARDE.glowAlpha : 0); };
+      const set = (on) => { b.img.setTexture(on ? 'ponto_aceso' : 'ponto_apagado'); b.glow.setAlpha(on ? DIA.glowAlpha : 0); };
       if (b.modo === 'apagado') return set(false);
       if (b.modo === 'aceso') return set(true);
       const run = () => {
@@ -951,6 +1011,7 @@ map.fios.forEach((f) => this.add.image(f.x * T, f.y * T, 'fio').setOrigin(0).set
 
     this.dogs.forEach((d) => this.updateDog(d, dt));
     this.crowdUpdate(dt);
+    this.heliUpdate(dt);
     const rp = this.skating || this.trick ? this.rampAt(p.x, p.y, 24) : null;
     this.setLift(this.skating && rp ? rp.lift : 0);
     p.setDepth(rp ? rp.depth : p.y); this.nameLabel.setPosition(p.x, p.y - (this.lift || 0) - (this.riding ? 50 + 12 * this.wheelie : this.skating ? 54 : 46)).setVisible(true);

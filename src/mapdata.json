@@ -41,6 +41,7 @@
   "gggggggggggggoppppdddddpppggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
  ],
 "houses": [
+  {"k": "padaria", "x": 12, "y": 26, "tank": false},
   {"k": "casa_azul", "x": 44, "y": 26, "tank": false},
   {"k": "casa_amarela", "x": 47, "y": 26, "tank": false},
   {"k": "casa_rosa", "x": 51, "y": 26, "tank": false},
@@ -285,10 +286,10 @@
    "tank": false
   },
   {
-   "k": "casa_amarela",
+   "k": "bar_ze",
    "x": 27,
    "y": 26,
-   "tank": true
+   "tank": false
   },
   {
    "k": "casa_verde",
